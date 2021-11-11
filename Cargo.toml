@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    'pallet-ajuna-matchmaker',
+    'pallet-ajuna-gameregistry',
+    'pallet-ajuna-connectfour',
+]
