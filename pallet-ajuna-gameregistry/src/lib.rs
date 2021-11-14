@@ -3,23 +3,21 @@
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// <https://substrate.dev/docs/en/knowledgebase/runtime/frame>
-
-use codec::{Encode, Decode};
+use codec::{Decode, Encode};
 use frame_support::{
 	log,
-	traits::{Randomness, LockIdentifier, schedule::{Named, DispatchTime}},
+	traits::{
+		schedule::{DispatchTime, Named},
+		LockIdentifier, Randomness,
+	},
 };
-use frame_system::{
-	WeightInfo
-};
-use sp_runtime::{
-	RuntimeDebug,
-	traits::{Hash, Dispatchable, TrailingZeroInput}
-};
-use sp_std::vec::{
-	Vec
-};
+use frame_system::WeightInfo;
 use scale_info::TypeInfo;
+use sp_runtime::{
+	traits::{Dispatchable, Hash, TrailingZeroInput},
+	RuntimeDebug,
+};
+use sp_std::vec::Vec;
 
 use log::info;
 
@@ -41,8 +39,7 @@ mod benchmarking;
 // importing queues, for game management
 mod queues;
 
-use queues::{Queue};
-
+use queues::Queue;
 
 /// GameState structure, allowing Client & TEE to determine actions.
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo)]
@@ -53,7 +50,11 @@ pub enum GameState<AccountId> {
 	Running,
 	Finished(AccountId),
 }
-impl<AccountId> Default for GameState<AccountId> { fn default() -> Self { Self::None } }
+impl<AccountId> Default for GameState<AccountId> {
+	fn default() -> Self {
+		Self::None
+	}
+}
 
 /// Connect four board structure containing two players and the board
 #[derive(Encode, Decode, Default, Clone, PartialEq, RuntimeDebug, TypeInfo)]
@@ -79,7 +80,11 @@ pub enum GameRuleType {
 	None,
 	PlayersPerGame([u8; 2]),
 }
-impl Default for GameRuleType { fn default() -> Self { Self::None } }
+impl Default for GameRuleType {
+	fn default() -> Self {
+		Self::None
+	}
+}
 
 /// Connect four board structure containing two players and the board
 #[derive(Encode, Decode, Default, Clone, PartialEq, RuntimeDebug, TypeInfo)]
@@ -93,7 +98,7 @@ const MAX_QUEUE_SIZE: u8 = 64;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::{dispatch::{DispatchResult}, pallet_prelude::*};
+	use frame_support::{dispatch::DispatchResult, pallet_prelude::*};
 	use frame_system::pallet_prelude::*;
 
 	// important to use outside structs and consts
@@ -102,12 +107,11 @@ pub mod pallet {
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		
-		type Proposal: Parameter + Dispatchable<Origin=Self::Origin> + From<Call<Self>>;
+		type Proposal: Parameter + Dispatchable<Origin = Self::Origin> + From<Call<Self>>;
 
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-		
+
 		/// The generator used to supply randomness to contracts through `seal_random`.
 		type Randomness: Randomness<Self::Hash, Self::BlockNumber>;
 
@@ -139,21 +143,31 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn game_queues)]
 	/// Store all queues for the games.
-	pub type GameQueues<T: Config> = StorageMap<_, Identity, GameEngine, Queue<T::Hash>, ValueQuery>;
+	pub type GameQueues<T: Config> =
+		StorageMap<_, Identity, GameEngine, Queue<T::Hash>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn game_registry)]
 	/// Store all queues for the games.
-	pub type GameRegistry<T: Config> = StorageMap<_, Identity, T::Hash, GameEntry<T::Hash, T::AccountId, GameEngine, GameState<T::AccountId>, T::BlockNumber>, ValueQuery>;
+	pub type GameRegistry<T: Config> = StorageMap<
+		_,
+		Identity,
+		T::Hash,
+		GameEntry<T::Hash, T::AccountId, GameEngine, GameState<T::AccountId>, T::BlockNumber>,
+		ValueQuery,
+	>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn game_requirements)]
 	/// Store all requirements for a sepecific game engine and it's version.
-	pub type GameRequirments<T: Config> = StorageMap<_, Identity, GameEngine, Vec<GameRule<GameRuleType>>, ValueQuery>;
+	pub type GameRequirments<T: Config> =
+		StorageMap<_, Identity, GameEngine, Vec<GameRule<GameRuleType>>, ValueQuery>;
 
 	// Default value for Nonce
 	#[pallet::type_value]
-	pub fn NonceDefault<T: Config>() -> u64 { 0 }
+	pub fn NonceDefault<T: Config>() -> u64 {
+		0
+	}
 	// Nonce used for generating a different seed each time.
 	#[pallet::storage]
 	pub type Nonce<T: Config> = StorageValue<_, u64, ValueQuery, NonceDefault<T>>;
@@ -168,9 +182,7 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self {
-				founder_key: Default::default(),
-			}
+			Self { founder_key: Default::default() }
 		}
 	}
 
@@ -190,7 +202,7 @@ pub mod pallet {
 		/// Event documentation should end with an array that provides descriptive names for event
 		/// parameters. [something, who]
 		SomethingStored(u32, T::AccountId),
-		
+
 		/// Game queued in waiting queue
 		GameQueued(GameEngine, T::Hash),
 
@@ -249,7 +261,7 @@ pub mod pallet {
 			// but we could dispatch extrinsic (transaction/unsigned/inherent) using
 			// sp_io::submit_extrinsic.
 			// To see example on offchain worker, please refer to example-offchain-worker pallet
-		 	// accompanied in this repository.
+			// accompanied in this repository.
 		}
 	}
 
@@ -257,12 +269,11 @@ pub mod pallet {
 	// These functions materialize as "extrinsics", which are often compared to transactions.
 	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
-	impl<T:Config> Pallet<T> {
+	impl<T: Config> Pallet<T> {
 		/// An example dispatchable that takes a singles value as a parameter, writes the value to
 		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
 		pub fn do_something(origin: OriginFor<T>, something: u32) -> DispatchResult {
-
 			// Check that the extrinsic was signed and get the signer.
 			// This function will return an error if the extrinsic is not signed.
 			// https://substrate.dev/docs/en/knowledgebase/runtime/origin
@@ -303,13 +314,16 @@ pub mod pallet {
 
 		/// Queue game will add game entry to registry and add it to the queue if requirements are met.
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-		pub fn queue_game(origin: OriginFor<T>, game_engine: GameEngine, players: Vec<T::AccountId>) -> DispatchResult {
-
+		pub fn queue_game(
+			origin: OriginFor<T>,
+			game_engine: GameEngine,
+			players: Vec<T::AccountId>,
+		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			// check if requirements for this game are meet, for all the players.
 			let game_rules = Self::game_requirements(&game_engine);
-			for game_rule in game_rules.iter() { 
+			for game_rule in game_rules.iter() {
 				// #TODO[MUST_HAVE, REQUIRMENTS_CHECK] check if game engine requirments are meet for the players.
 			}
 
@@ -340,8 +354,11 @@ pub mod pallet {
 
 		/// Drop game will remove the game from the queue and the registry.
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-		pub fn drop_game(origin: OriginFor<T>, game_hash: T::Hash, game_engine: GameEngine) -> DispatchResult {
-						
+		pub fn drop_game(
+			origin: OriginFor<T>,
+			game_hash: T::Hash,
+			game_engine: GameEngine,
+		) -> DispatchResult {
 			// #TODO[MUST_HAVE, SIGNATURE_CHECK] check that it's signed by a registred AjunaTEE.
 			let who = ensure_signed(origin)?;
 
@@ -358,7 +375,6 @@ pub mod pallet {
 					// insert into waiting queue for Ajuna TEE
 					<GameQueues<T>>::insert(game_engine, game_queue);
 				}
-
 			}
 
 			// #TODO[MUST_HAVE, VEC_REMOVE] remove a game from the queue.
@@ -368,14 +384,17 @@ pub mod pallet {
 
 		/// Acknowledge game will remove from queue and set state to accepted.
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-		pub fn ack_game(origin: OriginFor<T>, cluster: GameEngine, games: Vec<T::Hash>) -> DispatchResult {
-
+		pub fn ack_game(
+			origin: OriginFor<T>,
+			cluster: GameEngine,
+			games: Vec<T::Hash>,
+		) -> DispatchResult {
 			// #TODO[MUST_HAVE, SIGNATURE_CHECK] check that it's signed by a registred AjunaTEE.
 			let who = ensure_signed(origin)?;
 
 			// only up to 100 games allowed to acknowledge in one batch.
 			if games.len() > 100 {
-				return Err(Error::<T>::AckToMany)?;
+				return Err(Error::<T>::AckToMany)?
 			}
 
 			// #TODO[OPTIMIZATION, STORAGE] optimize storage to use a ringbuffer instead of the vector to avoid to big elements beeing read and written down to the queue.
@@ -384,22 +403,22 @@ pub mod pallet {
 			ensure!(GameQueues::<T>::contains_key(&cluster), Error::<T>::NoGameQueue);
 			let mut game_queue = Self::game_queues(&cluster);
 
-			let mut games_count = 0;	
+			let mut games_count = 0;
 			for game_hash_tee in games.iter() {
-
 				let game_hash = game_queue.peek();
 
 				// check if peeked game matches acknowledge
 				if game_hash == Some(game_hash_tee) {
-					
 					// dequeue game hash from waiting queue cluster
 					let _ = game_queue.dequeue();
-					
+
 					// insert changed queue back
 					<GameQueues<T>>::insert(cluster.clone(), game_queue.clone());
 
 					// retrieve game entry to change state
 					let mut game_entry = Self::game_registry(game_hash_tee.clone());
+
+					game_entry.state_change[1] = <frame_system::Pallet<T>>::block_number();
 					game_entry.game_state = GameState::Accepted;
 
 					// insert changed game entry back
@@ -407,11 +426,9 @@ pub mod pallet {
 
 					// Increase counter
 					games_count += 1;
-
 				} else {
-					return Err(Error::<T>::AckFail)?;
+					return Err(Error::<T>::AckFail)?
 				}
-
 			}
 
 			// Emit an event.
@@ -424,7 +441,6 @@ pub mod pallet {
 		/// Drop game will remove the game from the queue and the registry.
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
 		pub fn ready_game(origin: OriginFor<T>, game_hash: T::Hash) -> DispatchResult {
-						
 			// #TODO[MUST_HAVE, SIGNATURE_CHECK] check that it's signed by a registred AjunaTEE.
 			let who = ensure_signed(origin)?;
 
@@ -433,6 +449,7 @@ pub mod pallet {
 			let mut game_entry = Self::game_registry(&game_hash);
 
 			game_entry.tee_id = Some(who.clone());
+			game_entry.state_change[2] = <frame_system::Pallet<T>>::block_number();
 			game_entry.game_state = GameState::Running;
 
 			// insert changed game entry back
@@ -446,8 +463,11 @@ pub mod pallet {
 
 		/// Drop game will remove the game from the queue and the registry.
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-		pub fn finish_game(origin: OriginFor<T>, game_hash: T::Hash, winner: T::AccountId) -> DispatchResult {
-						
+		pub fn finish_game(
+			origin: OriginFor<T>,
+			game_hash: T::Hash,
+			winner: T::AccountId,
+		) -> DispatchResult {
 			// #TODO[MUST_HAVE, SIGNATURE_CHECK] check that it's signed by a registred AjunaTEE.
 			let who = ensure_signed(origin)?;
 
@@ -455,6 +475,7 @@ pub mod pallet {
 			ensure!(GameRegistry::<T>::contains_key(&game_hash), Error::<T>::NoGameEntry);
 			let mut game_entry = Self::game_registry(&game_hash);
 
+			game_entry.state_change[3] = <frame_system::Pallet<T>>::block_number();
 			game_entry.game_state = GameState::Finished(winner.clone());
 
 			// insert changed game entry back
@@ -465,38 +486,31 @@ pub mod pallet {
 
 			Ok(())
 		}
-
 	}
 }
 
 impl<T: Config> Pallet<T> {
-
-	/// Update nonce once used. 
-	fn encode_and_update_nonce(
-	) -> Vec<u8> {
+	/// Update nonce once used.
+	fn encode_and_update_nonce() -> Vec<u8> {
 		let nonce = <Nonce<T>>::get();
 		<Nonce<T>>::put(nonce.wrapping_add(1));
 		nonce.encode()
 	}
 
 	/// Generates a random hash out of a seed.
-	fn generate_random_hash(
-		phrase: &[u8], 
-		sender: T::AccountId
-	) -> T::Hash {
+	fn generate_random_hash(phrase: &[u8], sender: T::AccountId) -> T::Hash {
 		let (seed, _) = T::Randomness::random(phrase);
 		let seed = <[u8; 32]>::decode(&mut TrailingZeroInput::new(seed.as_ref()))
 			.expect("input is padded with zeroes; qed");
-		return (seed, &sender, Self::encode_and_update_nonce()).using_encoded(T::Hashing::hash);
+		return (seed, &sender, Self::encode_and_update_nonce()).using_encoded(T::Hashing::hash)
 	}
 
 	/// Generate a new game entry in waiting state.
 	fn create_game_entry(
 		sender: T::AccountId,
-		game_engine: GameEngine, 
-		players: Vec<T::AccountId>
+		game_engine: GameEngine,
+		players: Vec<T::AccountId>,
 	) -> GameEntry<T::Hash, T::AccountId, GameEngine, GameState<T::AccountId>, T::BlockNumber> {
-
 		// get a random hash as game id
 		let game_id = Self::generate_random_hash(&GAMEREGISTRY_ID, sender.clone());
 
@@ -508,13 +522,12 @@ impl<T: Config> Pallet<T> {
 		let game_entry = GameEntry {
 			id: game_id,
 			tee_id: None,
-			game_engine: game_engine,
-			players: players,
+			game_engine,
+			players,
 			game_state: GameState::Waiting,
-			state_change: state_change,
+			state_change,
 		};
 
-		return game_entry;
+		return game_entry
 	}
-
 }

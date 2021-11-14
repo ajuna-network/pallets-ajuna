@@ -24,17 +24,13 @@ fn correct_error_for_none_value() {
 #[test]
 fn regsitry_test() {
 	new_test_ext().execute_with(|| {
+		let player1: u64 = 1u64;
+		let player2: u64 = 2u64;
 
-		let player1:u64 = 1u64;
-		let player2:u64 = 2u64;
+		let scheduler: u64 = 5u64;
+		let tee: u64 = 7u64;
 
-		let scheduler:u64 = 5u64;
-		let tee:u64 = 7u64;
-		
-		let game_engine1: GameEngine = GameEngine {
-			id: 1,
-			version: 1,
-		};
+		let game_engine1: GameEngine = GameEngine { id: 1, version: 1 };
 
 		let mut players = Vec::new();
 		players.push(player1.clone());
@@ -84,10 +80,13 @@ fn regsitry_test() {
 		assert_eq!(game_entry4.game_state, GameState::Finished(player1));
 
 		// drop game
-		assert_ok!(Registry::drop_game(Origin::signed(tee), game_hash.clone(), game_engine1.clone()));
+		assert_ok!(Registry::drop_game(
+			Origin::signed(tee),
+			game_hash.clone(),
+			game_engine1.clone()
+		));
 
 		let game_entry5 = Registry::game_registry(&game_hash);
 		assert_eq!(game_entry5.game_state, GameState::None);
-
 	});
 }

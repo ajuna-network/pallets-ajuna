@@ -3,22 +3,18 @@
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// <https://substrate.dev/docs/en/knowledgebase/runtime/frame>
-
-use codec::{Encode, Decode};
+use codec::{Decode, Encode};
 use frame_support::{
 	log,
-	traits::{Randomness, LockIdentifier, schedule::{Named, DispatchTime}},
+	traits::{
+		schedule::{DispatchTime, Named},
+		LockIdentifier, Randomness,
+	},
 };
-use frame_system::{
-	WeightInfo
-};
-use sp_runtime::{
-	traits::{Hash, Dispatchable, TrailingZeroInput}
-};
-use sp_std::vec::{
-	Vec
-};
+use frame_system::WeightInfo;
 use scale_info::TypeInfo;
+use sp_runtime::traits::{Dispatchable, Hash, TrailingZeroInput};
+use sp_std::vec::Vec;
 
 use pallet_matchmaker::MatchFunc;
 
@@ -41,7 +37,7 @@ mod benchmarking;
 
 /// Implementations of some helper traits passed into runtime modules as associated types.
 pub mod connectfour;
-use connectfour::{Logic};
+use connectfour::Logic;
 
 const CONNECTFOUR_ID: LockIdentifier = *b"connect4";
 
@@ -56,7 +52,11 @@ pub enum BoardState<AccountId> {
 	Finished(AccountId),
 }
 
-impl<AccountId> Default for BoardState<AccountId> { fn default() -> Self { Self::None } }
+impl<AccountId> Default for BoardState<AccountId> {
+	fn default() -> Self {
+		Self::None
+	}
+}
 
 /// Connect four board structure containing two players and the board
 #[derive(Encode, Decode, Default, Clone, PartialEq, TypeInfo)]
@@ -79,7 +79,7 @@ const CLEANUP_BOARDS_AFTER: u8 = 20;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::{dispatch::{DispatchResult}, pallet_prelude::*};
+	use frame_support::{dispatch::DispatchResult, pallet_prelude::*};
 	use frame_system::pallet_prelude::*;
 
 	// important to use outside structs and consts
@@ -88,12 +88,11 @@ pub mod pallet {
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		
-		type Proposal: Parameter + Dispatchable<Origin=Self::Origin> + From<Call<Self>>;
+		type Proposal: Parameter + Dispatchable<Origin = Self::Origin> + From<Call<Self>>;
 
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-		
+
 		/// The generator used to supply randomness to contracts through `seal_random`.
 		type Randomness: Randomness<Self::Hash, Self::BlockNumber>;
 
@@ -126,7 +125,13 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn boards)]
 	/// Store all boards that are currently being played.
-	pub type Boards<T: Config> = StorageMap<_, Identity, T::Hash, BoardStruct<T::Hash, T::AccountId, T::BlockNumber, BoardState<T::AccountId>>, ValueQuery>;
+	pub type Boards<T: Config> = StorageMap<
+		_,
+		Identity,
+		T::Hash,
+		BoardStruct<T::Hash, T::AccountId, T::BlockNumber, BoardState<T::AccountId>>,
+		ValueQuery,
+	>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn player_board)]
@@ -136,11 +141,14 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn board_schedules)]
 	/// Store players active board, currently only one board per player allowed.
-	pub type BoardSchedules<T: Config> = StorageMap<_, Identity, T::Hash, Option<Vec<u8>>, ValueQuery>;
+	pub type BoardSchedules<T: Config> =
+		StorageMap<_, Identity, T::Hash, Option<Vec<u8>>, ValueQuery>;
 
 	// Default value for Nonce
 	#[pallet::type_value]
-	pub fn NonceDefault<T: Config>() -> u64 { 0 }
+	pub fn NonceDefault<T: Config>() -> u64 {
+		0
+	}
 	// Nonce used for generating a different seed each time.
 	#[pallet::storage]
 	pub type Nonce<T: Config> = StorageValue<_, u64, ValueQuery, NonceDefault<T>>;
@@ -155,9 +163,7 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self {
-				founder_key: Default::default(),
-			}
+			Self { founder_key: Default::default() }
 		}
 	}
 
@@ -177,7 +183,7 @@ pub mod pallet {
 		/// Event documentation should end with an array that provides descriptive names for event
 		/// parameters. [something, who]
 		SomethingStored(u32, T::AccountId),
-		
+
 		/// A new board got created.
 		NewBoard(T::Hash),
 	}
@@ -217,7 +223,7 @@ pub mod pallet {
 		fn on_initialize(_: T::BlockNumber) -> Weight {
 			// Anything that needs to be done at the start of the block.
 			// We don't do anything here.
-			
+
 			// initial weights
 			let mut tot_weights = 10_000;
 			for _i in 0..MAX_GAMES_PER_BLOCK {
@@ -228,10 +234,10 @@ pub mod pallet {
 					// Create new game
 					let _game_id = Self::create_game(result[0].clone(), result[1].clone());
 					// weights need to be adjusted
-					tot_weights = tot_weights + T::DbWeight::get().reads_writes(1,1);
-					continue;
+					tot_weights = tot_weights + T::DbWeight::get().reads_writes(1, 1);
+					continue
 				}
-				break;
+				break
 			}
 
 			// return standard weigth for trying to fiond a match
@@ -251,7 +257,7 @@ pub mod pallet {
 			// but we could dispatch extrinsic (transaction/unsigned/inherent) using
 			// sp_io::submit_extrinsic.
 			// To see example on offchain worker, please refer to example-offchain-worker pallet
-		 	// accompanied in this repository.
+			// accompanied in this repository.
 		}
 	}
 
@@ -259,12 +265,11 @@ pub mod pallet {
 	// These functions materialize as "extrinsics", which are often compared to transactions.
 	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
-	impl<T:Config> Pallet<T> {
+	impl<T: Config> Pallet<T> {
 		/// An example dispatchable that takes a singles value as a parameter, writes the value to
 		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
 		pub fn do_something(origin: OriginFor<T>, something: u32) -> DispatchResult {
-
 			// Check that the extrinsic was signed and get the signer.
 			// This function will return an error if the extrinsic is not signed.
 			// https://substrate.dev/docs/en/knowledgebase/runtime/origin
@@ -306,7 +311,6 @@ pub mod pallet {
 		/// Queue sender up for a game, ranking brackets
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
 		pub fn queue(origin: OriginFor<T>) -> DispatchResult {
-			
 			let sender = ensure_signed(origin)?;
 
 			// Make sure player has no board open.
@@ -316,7 +320,7 @@ pub mod pallet {
 			// Add player to queue, duplicate check is done in matchmaker.
 			if !T::MatchMaker::add_queue(sender, bracket) {
 				return Err(Error::<T>::AlreadyQueued)?
-			} 
+			}
 
 			Ok(())
 		}
@@ -324,7 +328,6 @@ pub mod pallet {
 		/// Empty all brackets, this is a founder only extrinsic.
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
 		pub fn empty_queue(origin: OriginFor<T>) -> DispatchResult {
-			
 			let sender = ensure_signed(origin)?;
 
 			// Make sure sender is founder.
@@ -340,7 +343,6 @@ pub mod pallet {
 		/// Create game for two players
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
 		pub fn new_game(origin: OriginFor<T>, opponent: T::AccountId) -> DispatchResult {
-			
 			let sender = ensure_signed(origin)?;
 
 			// Don't allow playing against yourself.
@@ -353,7 +355,7 @@ pub mod pallet {
 			// Make sure players have no board open.
 			ensure!(!PlayerBoard::<T>::contains_key(&sender), Error::<T>::PlayerBoardExists);
 			ensure!(!PlayerBoard::<T>::contains_key(&opponent), Error::<T>::PlayerBoardExists);
-			
+
 			// Create new game
 			let _board_id = Self::create_game(sender.clone(), opponent.clone());
 
@@ -363,7 +365,6 @@ pub mod pallet {
 		/// Create game for two players
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
 		pub fn play_turn(origin: OriginFor<T>, column: u8) -> DispatchResult {
-			
 			let sender = ensure_signed(origin)?;
 
 			ensure!(column < 8, "Game only allows columns smaller then 8");
@@ -371,13 +372,16 @@ pub mod pallet {
 			// TODO: should PlayerBoard storage here be optional to avoid two reads?
 			ensure!(PlayerBoard::<T>::contains_key(&sender), Error::<T>::NoPlayerBoard);
 			let board_id = Self::player_board(&sender);
-	
+
 			// Get board from player.
 			ensure!(Boards::<T>::contains_key(&board_id), "No board found");
 			let mut board = Self::boards(&board_id);
-			
+
 			// Board is still open to play and not finished.
-			ensure!(board.board_state == BoardState::Running, "Board is not running, check if already finished.");
+			ensure!(
+				board.board_state == BoardState::Running,
+				"Board is not running, check if already finished."
+			);
 
 			let current_player = board.next_player;
 			let current_account;
@@ -420,15 +424,17 @@ pub mod pallet {
 				let old_schedule_id = Self::board_schedules(&board_id);
 				if old_schedule_id.is_some() {
 					// cancel scheduled force end turn
-					if T::Scheduler::cancel_named(
-						old_schedule_id.unwrap(),
-					).is_err() {
+					if T::Scheduler::cancel_named(old_schedule_id.unwrap()).is_err() {
 						frame_support::print("LOGIC ERROR: test_schedule/schedule_named failed");
 					}
 				}
 			}
 
-			let schedule_id = Self::schedule_end_turn(board_id, last_turn, last_turn + MAX_BLOCKS_PER_TURN.into());
+			let schedule_id = Self::schedule_end_turn(
+				board_id,
+				last_turn,
+				last_turn + MAX_BLOCKS_PER_TURN.into(),
+			);
 			<BoardSchedules<T>>::insert(board_id, schedule_id);
 
 			Ok(())
@@ -436,7 +442,6 @@ pub mod pallet {
 
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
 		pub fn test_schedule(origin: OriginFor<T>, delay: T::BlockNumber) -> DispatchResult {
-
 			let sender = ensure_signed(origin)?;
 
 			let now = <frame_system::Pallet<T>>::block_number();
@@ -449,10 +454,12 @@ pub mod pallet {
 				None,
 				63,
 				frame_system::RawOrigin::Signed(sender).into(),
-				Call::do_something {something: index}.into(),
-			).is_err() {
+				Call::do_something { something: index }.into(),
+			)
+			.is_err()
+			{
 				frame_support::print("LOGIC ERROR: test_schedule/schedule_named failed");
-				return Err(Error::<T>::ScheduleError)?;
+				return Err(Error::<T>::ScheduleError)?
 			}
 
 			Ok(())
@@ -460,7 +467,11 @@ pub mod pallet {
 
 		/// Force end turn after max blocks per turn passed.
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
-		pub fn force_end_turn(origin: OriginFor<T>, board_id: T::Hash, last_turn: T::BlockNumber) -> DispatchResult {
+		pub fn force_end_turn(
+			origin: OriginFor<T>,
+			board_id: T::Hash,
+			last_turn: T::BlockNumber,
+		) -> DispatchResult {
 			ensure_root(origin)?;
 
 			// Get board from player.
@@ -470,7 +481,6 @@ pub mod pallet {
 			ensure!(board.last_turn == last_turn, "There has been a move in between.");
 
 			if board.board_state == BoardState::Running {
-
 				if board.next_player == PLAYER_1 {
 					board.board_state = BoardState::Finished(board.blue.clone());
 				} else if board.next_player == PLAYER_2 {
@@ -482,16 +492,18 @@ pub mod pallet {
 				// get current blocknumber
 				let last_turn = <frame_system::Pallet<T>>::block_number();
 				board.last_turn = last_turn;
-				
+
 				// Write next board state back into the storage
 				<Boards<T>>::insert(board_id, board);
 
 				// Execute cleanup task
-				let schedule_id = Self::schedule_end_turn(board_id, last_turn, last_turn + CLEANUP_BOARDS_AFTER.into());
+				let schedule_id = Self::schedule_end_turn(
+					board_id,
+					last_turn,
+					last_turn + CLEANUP_BOARDS_AFTER.into(),
+				);
 				<BoardSchedules<T>>::insert(board_id, schedule_id);
-			
 			} else {
-
 				// do cleanup after final force turn.
 				<Boards<T>>::remove(board_id);
 				<PlayerBoard<T>>::remove(board.red);
@@ -505,32 +517,23 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-
-	/// Update nonce once used. 
-	fn encode_and_update_nonce(
-	) -> Vec<u8> {
+	/// Update nonce once used.
+	fn encode_and_update_nonce() -> Vec<u8> {
 		let nonce = <Nonce<T>>::get();
 		<Nonce<T>>::put(nonce.wrapping_add(1));
 		nonce.encode()
 	}
 
 	/// Generates a random hash out of a seed.
-	fn generate_random_hash(
-		phrase: &[u8], 
-		sender: T::AccountId
-	) -> T::Hash {
+	fn generate_random_hash(phrase: &[u8], sender: T::AccountId) -> T::Hash {
 		let (seed, _) = T::Randomness::random(phrase);
 		let seed = <[u8; 32]>::decode(&mut TrailingZeroInput::new(seed.as_ref()))
 			.expect("input is padded with zeroes; qed");
-		return (seed, &sender, Self::encode_and_update_nonce()).using_encoded(T::Hashing::hash);
+		return (seed, &sender, Self::encode_and_update_nonce()).using_encoded(T::Hashing::hash)
 	}
 
 	/// Generate a new game between two players.
-	fn create_game(
-		red: T::AccountId, 
-		blue: T::AccountId
-	) -> T::Hash {
-
+	fn create_game(red: T::AccountId, blue: T::AccountId) -> T::Hash {
 		// get a random hash as board id
 		let board_id = Self::generate_random_hash(b"create", red.clone());
 
@@ -547,7 +550,7 @@ impl<T: Config> Pallet<T> {
 			blue: blue.clone(),
 			board: [[0u8; 6]; 7],
 			last_turn: block_number,
-			next_player: next_player,
+			next_player,
 			board_state: BoardState::Running,
 		};
 
@@ -562,16 +565,15 @@ impl<T: Config> Pallet<T> {
 		// Emit an event.
 		Self::deposit_event(Event::NewBoard(board_id));
 
-		return board_id;
+		return board_id
 	}
 
 	/// Schedule end turn
 	fn schedule_end_turn(
-		board_id: T::Hash, 
-		last_turn: T::BlockNumber, 
-		end_turn: T::BlockNumber
+		board_id: T::Hash,
+		last_turn: T::BlockNumber,
+		end_turn: T::BlockNumber,
 	) -> Option<Vec<u8>> {
-
 		//ensure!(end_turn > <frame_system::Pallet<T>>::block_number(), "Can't schedule a end turn in the past.");
 		let schedule_task_id = (CONNECTFOUR_ID, board_id, last_turn).encode();
 
@@ -581,13 +583,14 @@ impl<T: Config> Pallet<T> {
 			None,
 			63,
 			frame_system::RawOrigin::Root.into(),
-			Call::force_end_turn { board_id: board_id, last_turn: last_turn }.into(),
-		).is_err() {
+			Call::force_end_turn { board_id, last_turn }.into(),
+		)
+		.is_err()
+		{
 			frame_support::print("LOGIC ERROR: test_schedule/schedule_named failed");
 			return None
 		}
 
 		Some(schedule_task_id)
 	}
-
 }
