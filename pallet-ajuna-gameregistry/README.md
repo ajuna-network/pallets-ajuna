@@ -1,10 +1,10 @@
-# Ajuna Network Pallet MatchMaker
+# Ajuna Network Pallet GameRegistry
 
-This is a instantiable matchmaker Substrate pallet which lives as its own crate so it can be imported into multiple runtimes.
+This is a a first draft of the ajuna game registry.
 
 ## Purpose
 
-This pallet acts as a matchmaker for pairing players to match each other.
+This pallet acts as a game registry for games between L1 and L2, with Ajuna TEE.
 
 ## Dependencies
 
@@ -24,7 +24,7 @@ To add this pallet to your runtime, simply include the following to your runtime
 
 ```TOML
 # external pallets
-pallet-matchmaker = {default-features = false, version = '3.0.0', git = 'https://github.com/ajuna-network/pallet-jton-matchmaker.git', tag = 'monthly-2021-10' }
+pallet-gameregistry = {default-features = false, version = '3.0.0', git = 'https://https://github.com/ajuna-network/pallets-ajuna.git', tag = 'monthly-2021-10' }
 ```
 
 and update your runtime's `std` feature to include this pallet:
@@ -32,7 +32,7 @@ and update your runtime's `std` feature to include this pallet:
 ```TOML
 std = [
     # --snip--
-    'pallet-matchmaker/std',
+    'pallet-gameregistry/std',
 ]
 ```
 
@@ -40,26 +40,20 @@ std = [
 
 You should implement it's trait like so:
 
-AmountPlayers, amount of players need to create a match.
-AmountBrackets, amount of brackets that exists for ranking or other purpose.
-
 ```rust
 parameter_types! {
-	pub const AmountPlayers: u8 = 2;
-	pub const AmountBrackets: u8 = 3;
+
 }
 
-impl pallet_matchmaker::Config for Test {
+impl pallet_gameregistry::Config for Test {
 	type Event = Event;
-	type AmountPlayers = AmountPlayers;
-	type AmountBrackets = AmountBrackets;
 }
 ```
 
 and include it in your `construct_runtime!` macro:
 
 ```rust
-MatchMaker: pallet_matchmaker::{Pallet, Call, Storage, Event<T>},
+Registry: pallet_gameregistry::{Pallet, Call, Storage, Event<T>},
 ```
 
 ### Genesis Configuration
@@ -72,17 +66,7 @@ Additional types used in the matchmaker pallet
 
 ```json
 {
-  "MatchingType": {
-    "_enum": [
-      "None",
-      "Simple",
-      "Same",
-      "Mix"
-    ]
-  },
-  "PlayerStruct": {
-    "account": "AccountId"
-  }
+
 }
 ```
 
