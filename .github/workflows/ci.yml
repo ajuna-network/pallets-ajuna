@@ -25,9 +25,7 @@ jobs:
       matrix:
         os: [ ubuntu-latest ]
         check: [ cargo build --release,
-                 cargo build --release --features skip-ias-check,
-                 cargo test --all --features runtime-benchmarks,
-                 cargo test --all --features skip-ias-check,
+                 cargo test --all,
                  cargo fmt --all -- --check,
 #                 cargo clippy -- -D warnings Todo: Fix #10
         ]
