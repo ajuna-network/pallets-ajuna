@@ -40,7 +40,6 @@ fn regsitry_test() {
 		players.push(player1.clone());
 		players.push(player2.clone());
 
-
 		let queue_test1 = Registry::game_queues(&game_engine1);
 		assert_eq!(queue_test1.length(), 0);
 
@@ -55,6 +54,10 @@ fn regsitry_test() {
 		let mut games = Vec::new();
 		games.push(game_hash.clone());
 
+		// check correct game state
+		let game_entry1 = Registry::game_registry(&game_hash);
+		assert_eq!(game_entry1.game_state, GameState::Waiting);
+
 		// acknowledge game
 		assert_ok!(Registry::ack_game(Origin::signed(tee), game_engine1.clone(), games));
 
@@ -62,11 +65,29 @@ fn regsitry_test() {
 		let queue_test3 = Registry::game_queues(&game_engine1);
 		assert_eq!(queue_test3.length(), 0);
 
+		// check correct game state
+		let game_entry2 = Registry::game_registry(&game_hash);
+		assert_eq!(game_entry2.game_state, GameState::Accepted);
+
 		// ready game
 		assert_ok!(Registry::ready_game(Origin::signed(tee), game_hash.clone()));
 
+		// check correct game state
+		let game_entry3 = Registry::game_registry(&game_hash);
+		assert_eq!(game_entry3.game_state, GameState::Running);
+
 		// finish game
 		assert_ok!(Registry::finish_game(Origin::signed(tee), game_hash.clone(), player1.clone()));
+
+		// check correct game state
+		let game_entry4 = Registry::game_registry(&game_hash);
+		assert_eq!(game_entry4.game_state, GameState::Finished(player1));
+
+		// drop game
+		assert_ok!(Registry::drop_game(Origin::signed(tee), game_hash.clone(), game_engine1.clone()));
+
+		let game_entry5 = Registry::game_registry(&game_hash);
+		assert_eq!(game_entry5.game_state, GameState::None);
 
 	});
 }
