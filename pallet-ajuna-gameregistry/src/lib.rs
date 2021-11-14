@@ -66,10 +66,11 @@ pub struct GameEngine {
 #[derive(Encode, Decode, Default, Clone, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct GameEntry<Hash, AccountId, GameEngine, GameState, BlockNumber> {
 	id: Hash,
+	tee_id: Option<AccountId>,
 	game_engine: GameEngine,
 	players: Vec<AccountId>,
 	game_state: GameState,
-	state_change: [BlockNumber; 4]
+	state_change: [BlockNumber; 4],
 }
 
 /// GameState structure, allowing Client & TEE to determine actions.
@@ -88,7 +89,6 @@ pub struct GameRule<GameRuleType> {
 }
 
 const GAMEREGISTRY_ID: LockIdentifier = *b"gameregi";
-const MAX_CLUSTERS: u8 = 4;
 const MAX_QUEUE_SIZE: u8 = 64;
 
 #[frame_support::pallet]
@@ -196,6 +196,12 @@ pub mod pallet {
 
 		/// Amount of Games accepted by specific AjunaTEE
 		GamesAccepted(T::AccountId, u8),
+
+		/// Game state changed to running, game is ready to play
+		GameStateReady(T::AccountId, T::Hash),
+
+		/// Game state changed to finished, with game winner
+		GameStateFinished(T::Hash, T::AccountId),
 	}
 
 	// Errors inform users that something went wrong.
@@ -211,6 +217,8 @@ pub mod pallet {
 		AckFail,
 		/// There is no game queue for the game engine version.
 		NoGameQueue,
+		/// There is no such game entry
+		NoGameEntry,
 	}
 
 	// Pallet implements [`Hooks`] trait to define some logic to execute in some context.
@@ -300,7 +308,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			// check if requirements for this game are meet, for all the players.
-			let game_rules = Self::game_requirements(game_engine.clone());
+			let game_rules = Self::game_requirements(&game_engine);
 			for game_rule in game_rules.iter() { 
 				// #TODO[MUST_HAVE, REQUIRMENTS_CHECK] check if game engine requirments are meet for the players.
 			}
@@ -314,14 +322,14 @@ pub mod pallet {
 			// retrieve game queue for asked cluster
 			let mut game_queue = Queue::new(MAX_QUEUE_SIZE.into());
 			if GameQueues::<T>::contains_key(&game_engine) {
-				game_queue = Self::game_queues(game_engine.clone());
+				game_queue = Self::game_queues(&game_engine);
 			}
 
 			// enqueue new game id
 			game_queue.enqueue(game_entry.id.clone());
 
 			// insert into waiting queue for Ajuna TEE
-			<GameQueues<T>>::insert(game_engine.clone(), game_queue);
+			<GameQueues<T>>::insert(&game_engine, game_queue);
 
 			// Emit an event.
 			Self::deposit_event(Event::GameQueued(game_engine, game_entry.id));
@@ -332,10 +340,28 @@ pub mod pallet {
 
 		/// Drop game will remove the game from the queue and the registry.
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-		pub fn drop_game(origin: OriginFor<T>, something: u32) -> DispatchResult {
+		pub fn drop_game(origin: OriginFor<T>, game_hash: T::Hash, game_engine: GameEngine) -> DispatchResult {
 						
 			// #TODO[MUST_HAVE, SIGNATURE_CHECK] check that it's signed by a registred AjunaTEE.
 			let who = ensure_signed(origin)?;
+
+			// retrieve game entry
+			if GameRegistry::<T>::contains_key(&game_hash) {
+				let game_entry = GameRegistry::<T>::remove(&game_hash);
+
+				let mut game_queue = Self::game_queues(&game_engine);
+
+				// check if there is any elements queued
+				if game_queue.length() > 0 {
+					// remove element
+					game_queue.remove(game_hash);
+					// insert into waiting queue for Ajuna TEE
+					<GameQueues<T>>::insert(game_engine, game_queue);
+				}
+
+			}
+
+			// #TODO[MUST_HAVE, VEC_REMOVE] remove a game from the queue.
 
 			Ok(())
 		}
@@ -356,7 +382,7 @@ pub mod pallet {
 
 			// retrieve game queue for asked cluster
 			ensure!(GameQueues::<T>::contains_key(&cluster), Error::<T>::NoGameQueue);
-			let mut game_queue = Self::game_queues(cluster.clone());
+			let mut game_queue = Self::game_queues(&cluster);
 
 			let mut games_count = 0;	
 			for game_hash_tee in games.iter() {
@@ -401,8 +427,41 @@ pub mod pallet {
 						
 			// #TODO[MUST_HAVE, SIGNATURE_CHECK] check that it's signed by a registred AjunaTEE.
 			let who = ensure_signed(origin)?;
-		
 
+			// retrieve game entry
+			ensure!(GameRegistry::<T>::contains_key(&game_hash), Error::<T>::NoGameEntry);
+			let mut game_entry = Self::game_registry(&game_hash);
+
+			game_entry.tee_id = Some(who.clone());
+			game_entry.game_state = GameState::Running;
+
+			// insert changed game entry back
+			<GameRegistry<T>>::insert(game_hash, game_entry.clone());
+
+			// Emit an event.
+			Self::deposit_event(Event::GameStateReady(who, game_hash));
+
+			Ok(())
+		}
+
+		/// Drop game will remove the game from the queue and the registry.
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		pub fn finish_game(origin: OriginFor<T>, game_hash: T::Hash, winner: T::AccountId) -> DispatchResult {
+						
+			// #TODO[MUST_HAVE, SIGNATURE_CHECK] check that it's signed by a registred AjunaTEE.
+			let who = ensure_signed(origin)?;
+
+			// retrieve game entry
+			ensure!(GameRegistry::<T>::contains_key(&game_hash), Error::<T>::NoGameEntry);
+			let mut game_entry = Self::game_registry(&game_hash);
+
+			game_entry.game_state = GameState::Finished(winner.clone());
+
+			// insert changed game entry back
+			<GameRegistry<T>>::insert(game_hash, game_entry.clone());
+
+			// Emit an event.
+			Self::deposit_event(Event::GameStateFinished(game_hash, winner));
 
 			Ok(())
 		}
@@ -439,7 +498,7 @@ impl<T: Config> Pallet<T> {
 	) -> GameEntry<T::Hash, T::AccountId, GameEngine, GameState<T::AccountId>, T::BlockNumber> {
 
 		// get a random hash as game id
-		let game_id = Self::generate_random_hash(b"create", sender.clone());
+		let game_id = Self::generate_random_hash(&GAMEREGISTRY_ID, sender.clone());
 
 		// get current blocknumber
 		let mut state_change: [T::BlockNumber; 4] = [0u8.into(); 4];
@@ -448,6 +507,7 @@ impl<T: Config> Pallet<T> {
 		// create a new empty game
 		let game_entry = GameEntry {
 			id: game_id,
+			tee_id: None,
 			game_engine: game_engine,
 			players: players,
 			game_state: GameState::Waiting,

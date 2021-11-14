@@ -8,7 +8,7 @@ pub struct Queue<T> {
 	queue: Vec<T>,
 }
 
-impl<T> Queue<T> {
+impl<T: PartialEq> Queue<T> {
   
   pub fn new(size: u32) -> Self {
     Queue { 
@@ -40,6 +40,14 @@ impl<T> Queue<T> {
 
   pub fn peek(&self) -> Option<&T> {
     self.queue.first()
+  }
+
+  pub fn contains(&self, item: T) -> bool {
+    self.queue.contains(&item)
+  }
+
+  pub fn remove(&mut self, item: T) {
+    self.queue.retain(|x| x != &item)
   }
 
 }

@@ -31,7 +31,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>},
-		GameRegistry: pallet_gameregistry::{Pallet, Call, Config<T>, Storage, Event<T>},
+		Registry: pallet_gameregistry::{Pallet, Call, Config<T>, Storage, Event<T>},
 	}
 );
 
@@ -96,7 +96,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	//frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 	let t = GenesisConfig {
 			system: Default::default(),
-			game_registry: Default::default(),
+			registry: Default::default(),
 		}.build_storage().unwrap();
 		t.into()
 }
@@ -113,7 +113,7 @@ pub fn run_to_block(n: u64) {
 			// mock on_finalize
 			System::on_finalize(System::block_number());
 			Scheduler::on_finalize(System::block_number());
-			GameRegistry::on_finalize(System::block_number());
+			Registry::on_finalize(System::block_number());
 		}
 
 		System::set_block_number(System::block_number() + 1);
@@ -121,6 +121,6 @@ pub fn run_to_block(n: u64) {
 		// mock on_initialize
 		System::on_initialize(System::block_number());
 		Scheduler::on_initialize(System::block_number());
-		GameRegistry::on_initialize(System::block_number());
+		Registry::on_initialize(System::block_number());
 	}
 }
