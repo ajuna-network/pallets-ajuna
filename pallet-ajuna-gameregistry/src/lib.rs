@@ -13,6 +13,7 @@ use frame_system::{
 	WeightInfo
 };
 use sp_runtime::{
+	RuntimeDebug,
 	traits::{Hash, Dispatchable, TrailingZeroInput}
 };
 use sp_std::vec::{
@@ -37,34 +38,58 @@ mod benchmarking;
 // importing the `weights.rs` here
 //pub mod weights;
 
-const GAMEREGISTRY_ID: LockIdentifier = *b"gameregi";
+// importing queues, for game management
+mod queues;
 
-/// A type alias for the balance type from this pallet's point of view.
-//type BalanceOf<T> = <T as pallet_balances::Config>::Balance;
-//const MILLICENTS: u32 = 1_000_000_000;
+use queues::{Queue};
 
-#[derive(Encode, Decode, Clone, PartialEq, TypeInfo)]
+
+/// GameState structure, allowing Client & TEE to determine actions.
+#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum GameState<AccountId> {
 	None,
 	Waiting,
+	Accepted,
 	Running,
 	Finished(AccountId),
 }
-
 impl<AccountId> Default for GameState<AccountId> { fn default() -> Self { Self::None } }
 
 /// Connect four board structure containing two players and the board
-#[derive(Encode, Decode, Default, Clone, PartialEq, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Debug))]
-pub struct GameEntry<Hash, AccountId, GameState> {
-	id: Hash,
-	players: Vec<AccountId>,
-	game_state: GameState,
+#[derive(Encode, Decode, Default, Clone, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct GameEngine {
+	id: u8,
+	version: u8,
 }
 
-const MAX_GAMES_PER_BLOCK: u8 = 10;
-const MAX_BLOCKS_PER_TURN: u8 = 10;
-const CLEANUP_BOARDS_AFTER: u8 = 20;
+/// Connect four board structure containing two players and the board
+#[derive(Encode, Decode, Default, Clone, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct GameEntry<Hash, AccountId, GameEngine, GameState, BlockNumber> {
+	id: Hash,
+	game_engine: GameEngine,
+	players: Vec<AccountId>,
+	game_state: GameState,
+	state_change: [BlockNumber; 4]
+}
+
+/// GameState structure, allowing Client & TEE to determine actions.
+#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, TypeInfo)]
+pub enum GameRuleType {
+	None,
+	PlayersPerGame([u8; 2]),
+}
+impl Default for GameRuleType { fn default() -> Self { Self::None } }
+
+/// Connect four board structure containing two players and the board
+#[derive(Encode, Decode, Default, Clone, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct GameRule<GameRuleType> {
+	game_rule_type: GameRuleType,
+	game_rule_info: [u8; 16],
+}
+
+const GAMEREGISTRY_ID: LockIdentifier = *b"gameregi";
+const MAX_CLUSTERS: u8 = 4;
+const MAX_QUEUE_SIZE: u8 = 64;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -108,7 +133,23 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn founder_key)]
+	/// Founder key set in genesis, and maintained only for administration purpose.
 	pub type FounderKey<T: Config> = StorageValue<_, T::AccountId>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn game_queues)]
+	/// Store all queues for the games.
+	pub type GameQueues<T: Config> = StorageMap<_, Identity, GameEngine, Queue<T::Hash>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn game_registry)]
+	/// Store all queues for the games.
+	pub type GameRegistry<T: Config> = StorageMap<_, Identity, T::Hash, GameEntry<T::Hash, T::AccountId, GameEngine, GameState<T::AccountId>, T::BlockNumber>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn game_requirements)]
+	/// Store all requirements for a sepecific game engine and it's version.
+	pub type GameRequirments<T: Config> = StorageMap<_, Identity, GameEngine, Vec<GameRule<GameRuleType>>, ValueQuery>;
 
 	// Default value for Nonce
 	#[pallet::type_value]
@@ -150,8 +191,11 @@ pub mod pallet {
 		/// parameters. [something, who]
 		SomethingStored(u32, T::AccountId),
 		
-		/// A new board got created.
-		NewBoard(T::Hash),
+		/// Game queued in waiting queue
+		GameQueued(GameEngine, T::Hash),
+
+		/// Amount of Games accepted by specific AjunaTEE
+		GamesAccepted(T::AccountId, u8),
 	}
 
 	// Errors inform users that something went wrong.
@@ -161,6 +205,12 @@ pub mod pallet {
 		NoneValue,
 		/// Errors should have helpful documentation associated with them.
 		StorageOverflow,
+		/// To many games trying to acknowledge at once.
+		AckToMany,
+		/// During Acknowledge of a waiting games there was an error.
+		AckFail,
+		/// There is no game queue for the game engine version.
+		NoGameQueue,
 	}
 
 	// Pallet implements [`Hooks`] trait to define some logic to execute in some context.
@@ -243,6 +293,120 @@ pub mod pallet {
 			}
 		}
 
+		/// Queue game will add game entry to registry and add it to the queue if requirements are met.
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		pub fn queue_game(origin: OriginFor<T>, game_engine: GameEngine, players: Vec<T::AccountId>) -> DispatchResult {
+
+			let who = ensure_signed(origin)?;
+
+			// check if requirements for this game are meet, for all the players.
+			let game_rules = Self::game_requirements(game_engine.clone());
+			for game_rule in game_rules.iter() { 
+				// #TODO[MUST_HAVE, REQUIRMENTS_CHECK] check if game engine requirments are meet for the players.
+			}
+
+			// create new game entry with corresponding informations
+			let game_entry = Self::create_game_entry(who, game_engine.clone(), players);
+
+			// insert game entry into registry.
+			<GameRegistry<T>>::insert(game_entry.id.clone(), game_entry.clone());
+
+			// retrieve game queue for asked cluster
+			let mut game_queue = Queue::new(MAX_QUEUE_SIZE.into());
+			if GameQueues::<T>::contains_key(&game_engine) {
+				game_queue = Self::game_queues(game_engine.clone());
+			}
+
+			// enqueue new game id
+			game_queue.enqueue(game_entry.id.clone());
+
+			// insert into waiting queue for Ajuna TEE
+			<GameQueues<T>>::insert(game_engine.clone(), game_queue);
+
+			// Emit an event.
+			Self::deposit_event(Event::GameQueued(game_engine, game_entry.id));
+
+			// Return a successful DispatchResultWithPostInfo
+			Ok(())
+		}
+
+		/// Drop game will remove the game from the queue and the registry.
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		pub fn drop_game(origin: OriginFor<T>, something: u32) -> DispatchResult {
+						
+			// #TODO[MUST_HAVE, SIGNATURE_CHECK] check that it's signed by a registred AjunaTEE.
+			let who = ensure_signed(origin)?;
+
+			Ok(())
+		}
+
+		/// Acknowledge game will remove from queue and set state to accepted.
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		pub fn ack_game(origin: OriginFor<T>, cluster: GameEngine, games: Vec<T::Hash>) -> DispatchResult {
+
+			// #TODO[MUST_HAVE, SIGNATURE_CHECK] check that it's signed by a registred AjunaTEE.
+			let who = ensure_signed(origin)?;
+
+			// only up to 100 games allowed to acknowledge in one batch.
+			if games.len() > 100 {
+				return Err(Error::<T>::AckToMany)?;
+			}
+
+			// #TODO[OPTIMIZATION, STORAGE] optimize storage to use a ringbuffer instead of the vector to avoid to big elements beeing read and written down to the queue.
+
+			// retrieve game queue for asked cluster
+			ensure!(GameQueues::<T>::contains_key(&cluster), Error::<T>::NoGameQueue);
+			let mut game_queue = Self::game_queues(cluster.clone());
+
+			let mut games_count = 0;	
+			for game_hash_tee in games.iter() {
+
+				let game_hash = game_queue.peek();
+
+				// check if peeked game matches acknowledge
+				if game_hash == Some(game_hash_tee) {
+					
+					// dequeue game hash from waiting queue cluster
+					let _ = game_queue.dequeue();
+					
+					// insert changed queue back
+					<GameQueues<T>>::insert(cluster.clone(), game_queue.clone());
+
+					// retrieve game entry to change state
+					let mut game_entry = Self::game_registry(game_hash_tee.clone());
+					game_entry.game_state = GameState::Accepted;
+
+					// insert changed game entry back
+					<GameRegistry<T>>::insert(game_hash_tee, game_entry);
+
+					// Increase counter
+					games_count += 1;
+
+				} else {
+					return Err(Error::<T>::AckFail)?;
+				}
+
+			}
+
+			// Emit an event.
+			Self::deposit_event(Event::GamesAccepted(who, games_count));
+
+			// Return a successful DispatchResultWithPostInfo
+			Ok(())
+		}
+
+		/// Drop game will remove the game from the queue and the registry.
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		pub fn ready_game(origin: OriginFor<T>, game_hash: T::Hash) -> DispatchResult {
+						
+			// #TODO[MUST_HAVE, SIGNATURE_CHECK] check that it's signed by a registred AjunaTEE.
+			let who = ensure_signed(origin)?;
+		
+
+
+			Ok(())
+		}
+
 	}
 }
 
@@ -265,6 +429,32 @@ impl<T: Config> Pallet<T> {
 		let seed = <[u8; 32]>::decode(&mut TrailingZeroInput::new(seed.as_ref()))
 			.expect("input is padded with zeroes; qed");
 		return (seed, &sender, Self::encode_and_update_nonce()).using_encoded(T::Hashing::hash);
+	}
+
+	/// Generate a new game entry in waiting state.
+	fn create_game_entry(
+		sender: T::AccountId,
+		game_engine: GameEngine, 
+		players: Vec<T::AccountId>
+	) -> GameEntry<T::Hash, T::AccountId, GameEngine, GameState<T::AccountId>, T::BlockNumber> {
+
+		// get a random hash as game id
+		let game_id = Self::generate_random_hash(b"create", sender.clone());
+
+		// get current blocknumber
+		let mut state_change: [T::BlockNumber; 4] = [0u8.into(); 4];
+		state_change[0] = <frame_system::Pallet<T>>::block_number();
+
+		// create a new empty game
+		let game_entry = GameEntry {
+			id: game_id,
+			game_engine: game_engine,
+			players: players,
+			game_state: GameState::Waiting,
+			state_change: state_change,
+		};
+
+		return game_entry;
 	}
 
 }
