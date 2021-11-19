@@ -104,9 +104,8 @@ impl pallet_connectfour::Config for Test {
 	type MatchMaker = MatchMaker;
 }
 
-/// Build genesis storage according to the mock runtime.
+// Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	//frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 	let t = GenesisConfig { system: Default::default(), connect_four: Default::default() }
 		.build_storage()
 		.unwrap();

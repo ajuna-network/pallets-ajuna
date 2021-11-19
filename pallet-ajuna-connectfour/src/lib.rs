@@ -3,18 +3,21 @@
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// <https://substrate.dev/docs/en/knowledgebase/runtime/frame>
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
 	log,
 	traits::{
 		schedule::{DispatchTime, Named},
 		LockIdentifier, Randomness,
 	},
+	BoundedVec,
 };
 use frame_system::WeightInfo;
-use scale_info::TypeInfo;
 use sp_runtime::traits::{Dispatchable, Hash, TrailingZeroInput};
-use sp_std::vec::Vec;
+
+use scale_info::TypeInfo;
+
+use sp_std::{borrow::Borrow, convert::TryInto, prelude::*, vec::Vec};
 
 use pallet_matchmaker::MatchFunc;
 
@@ -45,7 +48,7 @@ const CONNECTFOUR_ID: LockIdentifier = *b"connect4";
 //type BalanceOf<T> = <T as pallet_balances::Config>::Balance;
 //const MILLICENTS: u32 = 1_000_000_000;
 
-#[derive(Encode, Decode, Clone, PartialEq, TypeInfo)]
+#[derive(Encode, Decode, Clone, PartialEq, MaxEncodedLen, TypeInfo)]
 pub enum BoardState<AccountId> {
 	None,
 	Running,
@@ -59,7 +62,7 @@ impl<AccountId> Default for BoardState<AccountId> {
 }
 
 /// Connect four board structure containing two players and the board
-#[derive(Encode, Decode, Default, Clone, PartialEq, TypeInfo)]
+#[derive(Encode, Decode, Default, Clone, PartialEq, MaxEncodedLen, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct BoardStruct<Hash, AccountId, BlockNumber, BoardState> {
 	id: Hash,
@@ -108,6 +111,7 @@ pub mod pallet {
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
+	//#[pallet::generate_storage_info]
 	pub struct Pallet<T>(_);
 
 	// The pallet's runtime storage items.
@@ -140,7 +144,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn board_schedules)]
-	/// Store players active board, currently only one board per player allowed.
+	/// Store boards open schedules.
 	pub type BoardSchedules<T: Config> =
 		StorageMap<_, Identity, T::Hash, Option<Vec<u8>>, ValueQuery>;
 
@@ -195,6 +199,8 @@ pub mod pallet {
 		NoneValue,
 		/// Errors should have helpful documentation associated with them.
 		StorageOverflow,
+		/// Something went wrong during generating
+		BadMetadata,
 		/// Couldn't put off a scheduler task as planned.
 		ScheduleError,
 		/// Player already has a board which is being played.
@@ -435,6 +441,10 @@ pub mod pallet {
 				last_turn,
 				last_turn + MAX_BLOCKS_PER_TURN.into(),
 			);
+
+			//let bounded_name: BoundedVec<u8, u32> =
+			//	schedule_id.unwrap().clone().try_into().map_err(|_| Error::<T>::BadMetadata)?;
+
 			<BoardSchedules<T>>::insert(board_id, schedule_id);
 
 			Ok(())
@@ -502,6 +512,7 @@ pub mod pallet {
 					last_turn,
 					last_turn + CLEANUP_BOARDS_AFTER.into(),
 				);
+
 				<BoardSchedules<T>>::insert(board_id, schedule_id);
 			} else {
 				// do cleanup after final force turn.
