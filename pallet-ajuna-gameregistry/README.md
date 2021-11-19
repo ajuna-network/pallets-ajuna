@@ -6,6 +6,8 @@ This is a a first draft of the ajuna game registry.
 
 This pallet acts as a game registry for games between L1 and L2, with Ajuna TEE.
 
+![GameRegistry](https://user-images.githubusercontent.com/17710198/142016775-9f8b5845-da6e-47ed-afb9-e86b0f6fe18f.png)
+
 ## Dependencies
 
 ### Traits
