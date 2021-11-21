@@ -62,8 +62,7 @@ impl<AccountId> Default for BoardState<AccountId> {
 }
 
 /// Connect four board structure containing two players and the board
-#[derive(Encode, Decode, Default, Clone, PartialEq, MaxEncodedLen, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Encode, Decode, Default, Clone, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub struct BoardStruct<Hash, AccountId, BlockNumber, BoardState> {
 	id: Hash,
 	red: AccountId,

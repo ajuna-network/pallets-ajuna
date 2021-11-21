@@ -34,8 +34,7 @@ pub enum MatchingType {
 	Mix,
 }
 
-#[derive(Encode, Decode, Default, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
-#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Encode, Decode, Default, Clone, PartialEq, Eq, Debug, TypeInfo, MaxEncodedLen)]
 pub struct PlayerStruct<AccountId> {
 	account: AccountId,
 }
