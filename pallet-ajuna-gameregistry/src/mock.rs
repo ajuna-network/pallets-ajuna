@@ -4,14 +4,17 @@ use crate as pallet_gameregistry;
 use sp_core::H256;
 
 use frame_support::{
+	construct_runtime,
 	parameter_types,
-	traits::{OnFinalize, OnInitialize},
+	traits::{OnFinalize, OnInitialize, EqualPrivilegeOnly},
 	weights::Weight,
 };
 
 use frame_support_test::TestRandomness;
 
-use frame_system::EnsureRoot;
+use frame_system::{
+	EnsureRoot,
+};
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
@@ -22,7 +25,7 @@ type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 // Configure a mock runtime to test the pallet.
-frame_support::construct_runtime!(
+construct_runtime!(
 	pub enum Test where
 		Block = Block,
 		NodeBlock = Block,
@@ -80,6 +83,7 @@ impl pallet_scheduler::Config for Test {
 	type ScheduleOrigin = EnsureRoot<u64>;
 	type MaxScheduledPerBlock = ();
 	type WeightInfo = ();
+	type OriginPrivilegeCmp = EqualPrivilegeOnly;
 }
 
 impl pallet_gameregistry::Config for Test {
@@ -91,9 +95,11 @@ impl pallet_gameregistry::Config for Test {
 }
 
 /// Build genesis storage according to the mock runtime.
-pub fn new_test_ext() -> sp_io::TestExternalities {
+pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	//frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
-	let t = GenesisConfig { system: Default::default(), registry: Default::default() }
+	let t = GenesisConfig { 
+		system: Default::default(), 
+		registry: Default::default(),}
 		.build_storage()
 		.unwrap();
 	t.into()

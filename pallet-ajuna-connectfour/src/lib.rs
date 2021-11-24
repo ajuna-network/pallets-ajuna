@@ -10,7 +10,6 @@ use frame_support::{
 		schedule::{DispatchTime, Named},
 		LockIdentifier, Randomness,
 	},
-	BoundedVec,
 };
 use frame_system::WeightInfo;
 use sp_runtime::traits::{Dispatchable, Hash, TrailingZeroInput};

@@ -5,13 +5,15 @@ use sp_core::H256;
 
 use frame_support::{
 	parameter_types,
-	traits::{OnFinalize, OnInitialize},
+	traits::{OnFinalize, OnInitialize, EqualPrivilegeOnly},
 	weights::Weight,
 };
 
 use frame_support_test::TestRandomness;
 
-use frame_system::EnsureRoot;
+use frame_system::{
+	EnsureRoot,
+};
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
@@ -44,7 +46,7 @@ parameter_types! {
 
 impl frame_system::Config for Test {
 	type BaseCallFilter = frame_support::traits::Everything;
-	type BlockWeights = ();
+	type BlockWeights = BlockWeights;
 	type BlockLength = ();
 	type DbWeight = ();
 	type Origin = Origin;
@@ -81,6 +83,7 @@ impl pallet_scheduler::Config for Test {
 	type ScheduleOrigin = EnsureRoot<u64>;
 	type MaxScheduledPerBlock = ();
 	type WeightInfo = ();
+	type OriginPrivilegeCmp = EqualPrivilegeOnly;
 }
 
 parameter_types! {
@@ -106,7 +109,8 @@ impl pallet_connectfour::Config for Test {
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let t = GenesisConfig { system: Default::default(), connect_four: Default::default() }
+	let t = GenesisConfig { 
+		system: Default::default(), connect_four: Default::default() }
 		.build_storage()
 		.unwrap();
 	t.into()
