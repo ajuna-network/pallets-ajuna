@@ -8,6 +8,7 @@ pub use pallet::*;
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_std::{boxed::Box, vec::Vec};
+
 use frame_support::traits::Get;
 
 #[cfg(test)]
