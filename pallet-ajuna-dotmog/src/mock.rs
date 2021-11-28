@@ -47,7 +47,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>},
+		Scheduler: pallet_scheduler::{Pallet, Call, Config, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
 		DotMogModule: pallet_dotmog::{Pallet, Call, Storage, Event<T>, Config<T>},
 	}
@@ -132,6 +132,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	let t = GenesisConfig {
 		// We use default for brevity, but you can configure as desired if needed.
 		system: Default::default(),
+		scheduler: Default::default(),
 		dot_mog_module: Default::default(),
 	}
 	.build_storage()

@@ -4,5 +4,6 @@ members = [
     'pallet-ajuna-gameregistry',
     'pallet-ajuna-connectfour',
     'pallet-ajuna-rps',
+    'pallet-ajuna-rpsonline',
     'pallet-ajuna-dotmog',
 ]
