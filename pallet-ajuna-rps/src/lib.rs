@@ -7,15 +7,11 @@ pub use pallet::*;
 
 use codec::{Decode, Encode};
 
-use sp_runtime::{
-	traits::{Hash, TrailingZeroInput}
-};
+use sp_runtime::traits::{Hash, TrailingZeroInput};
 
 use scale_info::TypeInfo;
 
-use sp_std::vec::{
-	Vec
-};
+use sp_std::vec::Vec;
 
 use sp_io::hashing::blake2_256;
 
@@ -36,9 +32,13 @@ pub enum MatchState {
 	Resolution,
 	Won,
 	Draw,
-	Lost
+	Lost,
 }
-impl Default for MatchState { fn default() -> Self { Self::None } }
+impl Default for MatchState {
+	fn default() -> Self {
+		Self::None
+	}
+}
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Debug, TypeInfo)]
 pub enum WeaponType {
@@ -47,7 +47,11 @@ pub enum WeaponType {
 	Paper,
 	Scissors,
 }
-impl Default for WeaponType { fn default() -> Self { Self::None } }
+impl Default for WeaponType {
+	fn default() -> Self {
+		Self::None
+	}
+}
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Debug, TypeInfo)]
 pub enum Choice<Hash> {
@@ -55,7 +59,11 @@ pub enum Choice<Hash> {
 	Choose(Hash),
 	Reveal(WeaponType),
 }
-impl<Hash> Default for Choice<Hash> { fn default() -> Self { Self::None } }
+impl<Hash> Default for Choice<Hash> {
+	fn default() -> Self {
+		Self::None
+	}
+}
 
 #[derive(Encode, Decode, Default, Clone, PartialEq, Eq, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -63,7 +71,7 @@ pub struct Game<Hash, AccountId> {
 	pub id: Hash,
 	pub players: [AccountId; 2],
 	pub choices: [Choice<Hash>; 2],
-	pub states:  [MatchState; 2],
+	pub states: [MatchState; 2],
 }
 
 #[frame_support::pallet]
@@ -94,7 +102,9 @@ pub mod pallet {
 
 	// Default value for Nonce
 	#[pallet::type_value]
-	pub fn NonceDefault<T: Config>() -> u64 { 0 }
+	pub fn NonceDefault<T: Config>() -> u64 {
+		0
+	}
 	// Nonce used for generating a different seed each time.
 	#[pallet::storage]
 	pub type Nonce<T: Config> = StorageValue<_, u64, ValueQuery, NonceDefault<T>>;
@@ -102,7 +112,8 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn games)]
 	/// Store all games that are currently being played.
-	pub type Games<T: Config> = StorageMap<_, Identity, T::Hash, Game<T::Hash, T::AccountId>, ValueQuery>;
+	pub type Games<T: Config> =
+		StorageMap<_, Identity, T::Hash, Game<T::Hash, T::AccountId>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn player_game)]
@@ -142,11 +153,9 @@ pub mod pallet {
 	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-
 		/// Create game for two players
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
 		pub fn new_game(origin: OriginFor<T>, opponent: T::AccountId) -> DispatchResult {
-
 			let sender = ensure_signed(origin)?;
 
 			// Don't allow playing against yourself.
@@ -180,7 +189,7 @@ pub mod pallet {
 			let mut me = 0;
 			if game.players[1] == sender {
 				me = 1;
-			} else  {
+			} else {
 				ensure!(game.players[0] == sender, Error::<T>::BadBehaviour);
 			}
 
@@ -217,13 +226,18 @@ pub mod pallet {
 			let mut me = 0;
 			if game.players[1] == sender {
 				me = 1;
-			} else  {
+			} else {
 				ensure!(game.players[0] == sender, Error::<T>::BadBehaviour);
 			}
 			let he = (me + 1) % 2;
 
 			// Make sure both players have made their choice and are in the reveal state.
-			ensure!(game.states[me] == MatchState::Reveal && (game.states[he] == MatchState::Reveal || game.states[he] == MatchState::Resolution), Error::<T>::BadBehaviour);
+			ensure!(
+				game.states[me] == MatchState::Reveal &&
+					(game.states[he] == MatchState::Reveal ||
+						game.states[he] == MatchState::Resolution),
+				Error::<T>::BadBehaviour
+			);
 
 			// get choice of player
 			let player_choice = game.choices[me].clone();
@@ -232,7 +246,7 @@ pub mod pallet {
 			match player_choice {
 				Choice::Choose(org_hash) => {
 					// compare persisted hash with revealing value
-					if org_hash == Self::hash_choice(salt, choice.clone() as u8)  {
+					if org_hash == Self::hash_choice(salt, choice.clone() as u8) {
 						game.choices[me] = Choice::Reveal(choice);
 					} else {
 						Err(Error::<T>::BadBehaviour)?
@@ -245,8 +259,8 @@ pub mod pallet {
 			game.states[me] = MatchState::Resolution;
 
 			// resolve game if both players waiting for resolution
-			if game.states[0] == MatchState::Resolution && game.states[1] == MatchState::Resolution {
-
+			if game.states[0] == MatchState::Resolution && game.states[1] == MatchState::Resolution
+			{
 				let mut me_weapon: WeaponType = WeaponType::None;
 				if let Choice::Reveal(weapon) = game.choices[me].clone() {
 					me_weapon = weapon;
@@ -285,33 +299,25 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-
 	/// Update nonce once used.
-	fn encode_and_update_nonce(
-	) -> Vec<u8> {
+	fn encode_and_update_nonce() -> Vec<u8> {
 		let nonce = <Nonce<T>>::get();
 		<Nonce<T>>::put(nonce.wrapping_add(1));
 		nonce.encode()
 	}
 
 	/// Generates a random hash out of a seed.
-	fn generate_random_hash(
-		phrase: &[u8],
-		sender: T::AccountId
-	) -> T::Hash {
+	fn generate_random_hash(phrase: &[u8], sender: T::AccountId) -> T::Hash {
 		// FIXME: fake random for now
 		let mut seed = <frame_system::Pallet<T>>::block_number().encode();
 		seed.append(&mut phrase.to_vec());
 		let seed: T::Hash = seed.using_encoded(T::Hashing::hash);
 		let seed = <[u8; 32]>::decode(&mut TrailingZeroInput::new(seed.as_ref()))
 			.expect("input is padded with zeroes; qed");
-		return (seed, &sender, Self::encode_and_update_nonce()).using_encoded(T::Hashing::hash);
+		return (seed, &sender, Self::encode_and_update_nonce()).using_encoded(T::Hashing::hash)
 	}
 
-	fn create_game(
-		players: [T::AccountId; 2]
-	) -> T::Hash {
-
+	fn create_game(players: [T::AccountId; 2]) -> T::Hash {
 		// get a random hash as board id
 		let game_id = Self::generate_random_hash(b"create", players[0].clone());
 
@@ -320,7 +326,7 @@ impl<T: Config> Pallet<T> {
 			id: game_id,
 			players: players.clone(),
 			choices: [Choice::None, Choice::None],
-			states: [ MatchState::Choose, MatchState::Choose],
+			states: [MatchState::Choose, MatchState::Choose],
 		};
 
 		// insert the new board into the storage
@@ -337,10 +343,7 @@ impl<T: Config> Pallet<T> {
 		game_id
 	}
 
-	fn hash_choice(
-		salt: [u8; 32],
-		choice: u8
-	) -> T::Hash {
+	fn hash_choice(salt: [u8; 32], choice: u8) -> T::Hash {
 		let mut choice_value = salt;
 		choice_value[31] = choice as u8;
 		let choice_hashed = blake2_256(&choice_value);
@@ -348,45 +351,38 @@ impl<T: Config> Pallet<T> {
 		choice_hashed.using_encoded(T::Hashing::hash)
 	}
 
-	fn game_logic(
-		a: &WeaponType,
-		b: &WeaponType
-	) -> u8 {
+	fn game_logic(a: &WeaponType, b: &WeaponType) -> u8 {
 		match a {
-			WeaponType::None => {
+			WeaponType::None =>
 				if a == b {
-					return 0;
+					return 0
 				} else {
-					return 2;
-				}
-			},
-			WeaponType::Rock => {
+					return 2
+				},
+			WeaponType::Rock =>
 				if a == b {
-					return 0;
+					return 0
 				} else if let WeaponType::Paper = b {
-					return 2;
+					return 2
 				} else {
-					return 1;
-				}
-			},
-			WeaponType::Paper => {
+					return 1
+				},
+			WeaponType::Paper =>
 				if a == b {
-					return 0;
+					return 0
 				} else if let WeaponType::Scissors = b {
-					return 2;
+					return 2
 				} else {
-					return 1;
-				}
-			},
-			WeaponType::Scissors => {
+					return 1
+				},
+			WeaponType::Scissors =>
 				if a == b {
-					return 0;
+					return 0
 				} else if let WeaponType::Rock = b {
-					return 2;
+					return 2
 				} else {
-					return 1;
-				}
-			},
+					return 1
+				},
 		}
 	}
 }

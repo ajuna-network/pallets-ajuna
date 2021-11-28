@@ -5,15 +5,13 @@ use sp_core::H256;
 
 use frame_support::{
 	parameter_types,
-	traits::{OnFinalize, OnInitialize, EqualPrivilegeOnly},
+	traits::{EqualPrivilegeOnly, OnFinalize, OnInitialize},
 	weights::Weight,
 };
 
 use frame_support_test::TestRandomness;
 
-use frame_system::{
-	EnsureRoot,
-};
+use frame_system::EnsureRoot;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
@@ -109,9 +107,7 @@ impl pallet_connectfour::Config for Test {
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let t = GenesisConfig { 
-		system: Default::default(), 
-		connect_four: Default::default() }
+	let t = GenesisConfig { system: Default::default(), connect_four: Default::default() }
 		.build_storage()
 		.unwrap();
 	t.into()

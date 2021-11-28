@@ -3,14 +3,14 @@ use crate as pallet_rps;
 
 use frame_support::{
 	parameter_types,
-	traits::{OnInitialize, OnFinalize},
+	traits::{OnFinalize, OnInitialize},
 };
 
 use sp_core::H256;
 use sp_runtime::{
-	BuildStorage,
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
+	BuildStorage,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -66,10 +66,8 @@ impl pallet_rps::Config for Test {
 /// Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	//frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
-	let t = GenesisConfig {
-			system: Default::default(),
-		}.build_storage().unwrap();
-		t.into()
+	let t = GenesisConfig { system: Default::default() }.build_storage().unwrap();
+	t.into()
 }
 
 pub fn run_next_block() {
@@ -79,7 +77,6 @@ pub fn run_next_block() {
 /// Run until a particular block.
 pub fn run_to_block(n: u64) {
 	while System::block_number() < n {
-
 		if System::block_number() > 1 {
 			// mock on_finalize
 			System::on_finalize(System::block_number());
@@ -88,7 +85,7 @@ pub fn run_to_block(n: u64) {
 		}
 
 		System::set_block_number(System::block_number() + 1);
-		
+
 		// mock on_initialize
 		System::on_initialize(System::block_number());
 		//Scheduler::on_initialize(System::block_number());

@@ -20,7 +20,7 @@
 use super::*;
 use mock::*;
 
-use frame_support::{assert_ok, assert_noop};
+use frame_support::{assert_noop, assert_ok};
 
 #[test]
 fn it_works_for_default_value() {
@@ -36,10 +36,7 @@ fn it_works_for_default_value() {
 fn correct_error_for_none_value() {
 	new_test_ext().execute_with(|| {
 		// Ensure the expected error is thrown when no value is present.
-		assert_noop!(
-			DotMogModule::cause_error(Origin::signed(1)),
-			Error::<Test>::NoneValue
-		);
+		assert_noop!(DotMogModule::cause_error(Origin::signed(1)), Error::<Test>::NoneValue);
 	});
 }
 
@@ -49,7 +46,7 @@ fn test_dotmog_breeding() {
 		assert_eq!(DotMogModule::all_mogwais_count(), 0);
 		assert_ok!(DotMogModule::create_mogwai(Origin::signed(1)));
 		assert_eq!(DotMogModule::all_mogwais_count(), 1);
-		
+
 		// test create
 		assert_ok!(DotMogModule::create_mogwai(Origin::signed(1)));
 		assert_eq!(DotMogModule::all_mogwais_count(), 2);
@@ -64,7 +61,7 @@ fn test_dotmog_breeding() {
 
 		// test morph
 		assert_ok!(DotMogModule::morph_mogwai(Origin::signed(1), mogwai_hash_1));
-		
+
 		// test breed
 		assert_eq!(DotMogModule::all_game_events_count(), 0);
 		assert_ok!(DotMogModule::breed_mogwai(Origin::signed(1), mogwai_hash_1, mogwai_hash_2));

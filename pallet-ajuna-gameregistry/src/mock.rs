@@ -4,17 +4,14 @@ use crate as pallet_gameregistry;
 use sp_core::H256;
 
 use frame_support::{
-	construct_runtime,
-	parameter_types,
-	traits::{OnFinalize, OnInitialize, EqualPrivilegeOnly},
+	construct_runtime, parameter_types,
+	traits::{EqualPrivilegeOnly, OnFinalize, OnInitialize},
 	weights::Weight,
 };
 
 use frame_support_test::TestRandomness;
 
-use frame_system::{
-	EnsureRoot,
-};
+use frame_system::EnsureRoot;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
@@ -97,9 +94,7 @@ impl pallet_gameregistry::Config for Test {
 /// Build genesis storage according to the mock runtime.
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	//frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
-	let t = GenesisConfig { 
-		system: Default::default(), 
-		registry: Default::default(),}
+	let t = GenesisConfig { system: Default::default(), registry: Default::default() }
 		.build_storage()
 		.unwrap();
 	t.into()

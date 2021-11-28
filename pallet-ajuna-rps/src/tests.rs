@@ -1,15 +1,14 @@
 use super::*;
-use crate::{Error, mock::*};
+use crate::{mock::*, Error};
 
-use frame_support::{assert_ok, assert_noop};
+use frame_support::{assert_noop, assert_ok};
 
 #[test]
 fn test_game_creation() {
 	new_test_ext().execute_with(|| {
-
-		let player_1:u64 = 1;
-		let player_2:u64 = 2;
-		let player_3:u64 = 3;
+		let player_1: u64 = 1;
+		let player_2: u64 = 2;
+		let player_3: u64 = 3;
 
 		// Test player can not play against himself
 		assert_noop!(
@@ -37,19 +36,17 @@ fn test_game_creation() {
 		);
 
 		let _game = RockPaperScissor::games(game_id_1);
-
 	});
 }
 
 #[test]
 fn try_rps_player_1_win() {
 	new_test_ext().execute_with(|| {
+		let player_1: u64 = 1;
+		let salt_1: [u8; 32] = [1u8; 32];
 
-		let player_1:u64 = 1;
-		let salt_1: [u8; 32] = [1u8;32];
-
-		let player_2:u64 = 2;
-		let salt_2: [u8; 32] = [2u8;32];
+		let player_2: u64 = 2;
+		let salt_2: [u8; 32] = [2u8; 32];
 
 		// Create game
 		assert_ok!(RockPaperScissor::new_game(Origin::signed(player_1), player_2));
@@ -68,7 +65,11 @@ fn try_rps_player_1_win() {
 
 		run_next_block();
 
-		assert_ok!(RockPaperScissor::choose(Origin::signed(player_1), WeaponType::Scissors, salt_1));
+		assert_ok!(RockPaperScissor::choose(
+			Origin::signed(player_1),
+			WeaponType::Scissors,
+			salt_1
+		));
 		let game = RockPaperScissor::games(game_id);
 		matches!(game.states[0], MatchState::Reveal);
 		matches!(game.states[1], MatchState::Reveal);
@@ -76,7 +77,11 @@ fn try_rps_player_1_win() {
 		run_next_block();
 
 		// Reveal phase
-		assert_ok!(RockPaperScissor::reveal(Origin::signed(player_1), WeaponType::Scissors, salt_1));
+		assert_ok!(RockPaperScissor::reveal(
+			Origin::signed(player_1),
+			WeaponType::Scissors,
+			salt_1
+		));
 		let game = RockPaperScissor::games(game_id);
 		matches!(game.states[0], MatchState::Resolution);
 		matches!(game.states[1], MatchState::Reveal);
@@ -84,29 +89,31 @@ fn try_rps_player_1_win() {
 		run_next_block();
 
 		// trying to cheat !!!
-		assert_noop!(RockPaperScissor::reveal(Origin::signed(player_2), WeaponType::Rock, salt_2),
-			Error::<Test>::BadBehaviour);
-		assert_noop!(RockPaperScissor::reveal(Origin::signed(player_2), WeaponType::Paper, salt_1),
-			Error::<Test>::BadBehaviour);
+		assert_noop!(
+			RockPaperScissor::reveal(Origin::signed(player_2), WeaponType::Rock, salt_2),
+			Error::<Test>::BadBehaviour
+		);
+		assert_noop!(
+			RockPaperScissor::reveal(Origin::signed(player_2), WeaponType::Paper, salt_1),
+			Error::<Test>::BadBehaviour
+		);
 
 		assert_ok!(RockPaperScissor::reveal(Origin::signed(player_2), WeaponType::Paper, salt_2));
 		let game = RockPaperScissor::games(game_id);
 
 		matches!(game.states[0], MatchState::Won);
 		matches!(game.states[1], MatchState::Lost);
-
 	});
 }
 
 #[test]
 fn try_rps_player_2_win() {
 	new_test_ext().execute_with(|| {
+		let player_1: u64 = 1;
+		let salt_1: [u8; 32] = [1u8; 32];
 
-		let player_1:u64 = 1;
-		let salt_1: [u8; 32] = [1u8;32];
-
-		let player_2:u64 = 2;
-		let salt_2: [u8; 32] = [2u8;32];
+		let player_2: u64 = 2;
+		let salt_2: [u8; 32] = [2u8; 32];
 
 		// Create game
 		assert_ok!(RockPaperScissor::new_game(Origin::signed(player_1), player_2));
@@ -145,19 +152,17 @@ fn try_rps_player_2_win() {
 
 		matches!(game.states[0], MatchState::Lost);
 		matches!(game.states[1], MatchState::Won);
-
 	});
 }
 
 #[test]
 fn try_rps_players_draw() {
 	new_test_ext().execute_with(|| {
+		let player_1: u64 = 1;
+		let salt_1: [u8; 32] = [1u8; 32];
 
-		let player_1:u64 = 1;
-		let salt_1: [u8; 32] = [1u8;32];
-
-		let player_2:u64 = 2;
-		let salt_2: [u8; 32] = [2u8;32];
+		let player_2: u64 = 2;
+		let salt_2: [u8; 32] = [2u8; 32];
 
 		// Create game
 		assert_ok!(RockPaperScissor::new_game(Origin::signed(player_1), player_2));
@@ -196,6 +201,5 @@ fn try_rps_players_draw() {
 
 		matches!(game.states[0], MatchState::Draw);
 		matches!(game.states[1], MatchState::Draw);
-
 	});
 }

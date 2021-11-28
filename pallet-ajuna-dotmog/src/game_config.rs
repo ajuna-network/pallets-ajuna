@@ -10,9 +10,9 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Affero General Public License for more details.
 
-use frame_support::{codec::{Encode, Decode}};
-use sp_std::vec::{Vec};
+use frame_support::codec::{Decode, Encode};
 use scale_info::TypeInfo;
+use sp_std::vec::Vec;
 
 #[derive(Encode, Decode, Clone, PartialEq, TypeInfo)]
 pub enum GameConfigType {
@@ -22,16 +22,19 @@ pub enum GameConfigType {
 	AccountNaming = 3,
 }
 
-impl Default for GameConfigType { fn default() -> Self { Self::Activated } }
+impl Default for GameConfigType {
+	fn default() -> Self {
+		Self::Activated
+	}
+}
 
 #[derive(Encode, Decode, Default, Clone, PartialEq, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Debug))]
-pub struct GameConfig{
-	pub parameters: Vec<u8>
+pub struct GameConfig {
+	pub parameters: Vec<u8>,
 }
 
 impl GameConfig {
-
 	pub const PARAM_COUNT: u8 = 8;
 
 	pub fn new() -> Self {
@@ -39,40 +42,34 @@ impl GameConfig {
 		for _i in 0..GameConfig::PARAM_COUNT {
 			v.push(0);
 		}
-		return GameConfig {
-			parameters: v,
-		};
+		return GameConfig { parameters: v }
 	}
 	pub fn config_value(index: u8, value: u8) -> u32 {
-		let result:u32;
+		let result: u32;
 		match index {
 			// MaxMogwaisInAccount
-            1 => {
-				match value {
-					0 => result = 6,
-					1 => result = 12,
-					2 => result = 18,
-					3 => result = 24,
-					_ => result = 0,
-				}
+			1 => match value {
+				0 => result = 6,
+				1 => result = 12,
+				2 => result = 18,
+				3 => result = 24,
+				_ => result = 0,
 			},
-            _ => result = 0,
+			_ => result = 0,
 		}
 		result
 	}
 	pub fn verify_update(index: u8, value: u8, update_value_opt: Option<u8>) -> u8 {
-		let mut result:u8;
+		let mut result: u8;
 		match index {
 			// MaxMogwaisInAccount
-            1 => {
-				match value {
-					0 => result = 1,
-					1 => result = 2,
-					2 => result = 3,
-					_ => result = 0,
-				}
+			1 => match value {
+				0 => result = 1,
+				1 => result = 2,
+				2 => result = 3,
+				_ => result = 0,
 			},
-            _ => result = 0,
+			_ => result = 0,
 		}
 		// don't allow bad requests
 		if update_value_opt.is_some() && result != update_value_opt.unwrap() {

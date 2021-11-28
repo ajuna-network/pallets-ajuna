@@ -2,10 +2,10 @@
 
 use super::*;
 
-use frame_system::RawOrigin;
-use frame_benchmarking::{benchmarks, whitelisted_caller, impl_benchmark_test_suite};
 #[allow(unused)]
 use crate::Pallet as RockPaperScissor;
+use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_system::RawOrigin;
 
 benchmarks! {
 	do_something {
@@ -17,8 +17,4 @@ benchmarks! {
 	}
 }
 
-impl_benchmark_test_suite!(
-	RockPaperScissor,
-	crate::mock::new_test_ext(),
-	crate::mock::Test,
-);
+impl_benchmark_test_suite!(RockPaperScissor, crate::mock::new_test_ext(), crate::mock::Test,);

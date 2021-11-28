@@ -18,10 +18,10 @@
 //! Assets pallet benchmarking.
 
 use super::*;
-use sp_runtime::traits::Bounded;
-use frame_system::RawOrigin as SystemOrigin;
-use frame_benchmarking::{benchmarks, account, whitelisted_caller};
+use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::traits::Get;
+use frame_system::RawOrigin as SystemOrigin;
+use sp_runtime::traits::Bounded;
 
 use crate::Module as DotMogModule;
 
@@ -33,11 +33,11 @@ fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
 	assert_eq!(event, &system_event);
 }
 
-benchmarks!{
-    do_something {
-        let caller: T::AccountId = whitelisted_caller();
-    }: _(SystemOrigin::Signed(caller.clone()), 1u32.into())
-    verify {
-        //assert_last_event::<T>(Event::SomethingStored(1u32.into(), caller).into());
-    }
+benchmarks! {
+	do_something {
+		let caller: T::AccountId = whitelisted_caller();
+	}: _(SystemOrigin::Signed(caller.clone()), 1u32.into())
+	verify {
+		//assert_last_event::<T>(Event::SomethingStored(1u32.into(), caller).into());
+	}
 }

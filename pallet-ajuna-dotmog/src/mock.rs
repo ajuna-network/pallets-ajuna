@@ -24,15 +24,13 @@ use sp_core::H256;
 
 use frame_support::{
 	parameter_types,
-	traits::{OnFinalize, OnInitialize, EqualPrivilegeOnly},
+	traits::{EqualPrivilegeOnly, OnFinalize, OnInitialize},
 	weights::Weight,
 };
 
 use frame_support_test::TestRandomness;
 
-use frame_system::{
-	EnsureRoot,
-};
+use frame_system::EnsureRoot;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
@@ -132,10 +130,12 @@ impl Config for Test {
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let t = GenesisConfig {
-			// We use default for brevity, but you can configure as desired if needed.
-		system: Default::default(), 
+		// We use default for brevity, but you can configure as desired if needed.
+		system: Default::default(),
 		dot_mog_module: Default::default(),
-	}.build_storage().unwrap();
+	}
+	.build_storage()
+	.unwrap();
 	t.into()
 }
 

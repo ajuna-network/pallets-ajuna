@@ -10,7 +10,7 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Affero General Public License for more details.
 
-use frame_support::{codec::{Encode, Decode}};
+use frame_support::codec::{Decode, Encode};
 use scale_info::TypeInfo;
 
 #[derive(Encode, Decode, Clone, PartialEq, TypeInfo)]
@@ -19,10 +19,13 @@ pub enum GameEventType {
 	Hatch = 1,
 }
 
-impl Default for GameEventType { fn default() -> Self { Self::Default } }
+impl Default for GameEventType {
+	fn default() -> Self {
+		Self::Default
+	}
+}
 
 impl GameEventType {
-
 	pub fn time_till(game_type: GameEventType) -> u16 {
 		match game_type {
 			GameEventType::Hatch => 100,
