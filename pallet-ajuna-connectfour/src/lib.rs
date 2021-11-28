@@ -16,7 +16,7 @@ use sp_runtime::traits::{Dispatchable, Hash, TrailingZeroInput};
 
 use scale_info::TypeInfo;
 
-use sp_std::{borrow::Borrow, convert::TryInto, prelude::*, vec::Vec};
+use sp_std::{prelude::*, vec::Vec};
 
 use pallet_matchmaker::MatchFunc;
 
