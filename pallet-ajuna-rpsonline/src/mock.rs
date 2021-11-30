@@ -5,19 +5,18 @@ use sp_core::H256;
 
 use frame_support::{
 	parameter_types,
-	traits::{EqualPrivilegeOnly, OnInitialize, OnFinalize},
+	traits::{EqualPrivilegeOnly, OnFinalize, OnInitialize},
 	weights::Weight,
 };
 
 use frame_support_test::TestRandomness;
 
+use frame_system::EnsureRoot;
 use sp_runtime::{
-	BuildStorage,
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
-	Perbill,
+	BuildStorage, Perbill,
 };
-use frame_system::{EnsureRoot};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -109,11 +108,13 @@ impl pallet_rpsonline::Config for Test {
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	//frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 	let t = GenesisConfig {
-			system: Default::default(),
-			scheduler: Default::default(),
-			rps_online: Default::default(),
-		}.build_storage().unwrap();
-		t.into()
+		system: Default::default(),
+		scheduler: Default::default(),
+		rps_online: Default::default(),
+	}
+	.build_storage()
+	.unwrap();
+	t.into()
 }
 
 pub fn run_next_block() {
@@ -123,7 +124,6 @@ pub fn run_next_block() {
 /// Run until a particular block.
 pub fn run_to_block(n: u64) {
 	while System::block_number() < n {
-
 		if System::block_number() > 1 {
 			// mock on_finalize
 			System::on_finalize(System::block_number());
@@ -132,7 +132,7 @@ pub fn run_to_block(n: u64) {
 		}
 
 		System::set_block_number(System::block_number() + 1);
-		
+
 		// mock on_initialize
 		System::on_initialize(System::block_number());
 		Scheduler::on_initialize(System::block_number());

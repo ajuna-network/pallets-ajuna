@@ -61,6 +61,8 @@ fn regsitry_test() {
 		let queue_test3 = Registry::game_queues(&game_engine1);
 		assert_eq!(queue_test3.length(), 0);
 
+		run_next_block();
+
 		// check correct game state
 		let game_entry2 = Registry::game_registry(&game_hash);
 		assert_eq!(game_entry2.game_state, GameState::Accepted);
@@ -68,9 +70,13 @@ fn regsitry_test() {
 		// ready game
 		assert_ok!(Registry::ready_game(Origin::signed(tee), game_hash.clone()));
 
+		run_next_block();
+
 		// check correct game state
 		let game_entry3 = Registry::game_registry(&game_hash);
 		assert_eq!(game_entry3.game_state, GameState::Running);
+
+		run_next_block();
 
 		// finish game
 		assert_ok!(Registry::finish_game(Origin::signed(tee), game_hash.clone(), player1.clone()));

@@ -6,12 +6,9 @@
 use codec::{Decode, Encode};
 use frame_support::{
 	log,
-	traits::{
-		schedule::{DispatchTime, Named},
-		LockIdentifier, Randomness,
-	},
+	traits::{LockIdentifier, Randomness},
 };
-use frame_system::WeightInfo;
+//use frame_system::WeightInfo;
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{Dispatchable, Hash, TrailingZeroInput},
@@ -114,10 +111,6 @@ pub mod pallet {
 
 		/// The generator used to supply randomness to contracts through `seal_random`.
 		type Randomness: Randomness<Self::Hash, Self::BlockNumber>;
-
-		type Scheduler: Named<Self::BlockNumber, Self::Proposal, Self::PalletsOrigin>;
-
-		type PalletsOrigin: From<frame_system::RawOrigin<Self::AccountId>>;
 
 		// /// Weight information for extrinsics in this pallet.
 		//type WeightInfo: WeightInfo;
@@ -323,7 +316,7 @@ pub mod pallet {
 
 			// check if requirements for this game are meet, for all the players.
 			let game_rules = Self::game_requirements(&game_engine);
-			for game_rule in game_rules.iter() {
+			for _game_rule in game_rules.iter() {
 				// #TODO[MUST_HAVE, REQUIRMENTS_CHECK] check if game engine requirments are meet for the players.
 			}
 
@@ -360,11 +353,11 @@ pub mod pallet {
 			game_engine: GameEngine,
 		) -> DispatchResult {
 			// #TODO[MUST_HAVE, SIGNATURE_CHECK] check that it's signed by a registred AjunaTEE.
-			let who = ensure_signed(origin)?;
+			let _who = ensure_signed(origin)?;
 
 			// retrieve game entry
 			if GameRegistry::<T>::contains_key(&game_hash) {
-				let game_entry = GameRegistry::<T>::remove(&game_hash);
+				let _game_entry = GameRegistry::<T>::remove(&game_hash);
 
 				let mut game_queue = Self::game_queues(&game_engine);
 

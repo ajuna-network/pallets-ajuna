@@ -107,13 +107,13 @@ impl pallet_connectfour::Config for Test {
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let t = GenesisConfig { 
-		system: Default::default(), 
-		scheduler: Default::default(), 
-		connect_four: Default::default() 
+	let t = GenesisConfig {
+		system: Default::default(),
+		scheduler: Default::default(),
+		connect_four: Default::default(),
 	}
-		.build_storage()
-		.unwrap();
+	.build_storage()
+	.unwrap();
 	t.into()
 }
 

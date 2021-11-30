@@ -30,7 +30,6 @@ frame-system = {default-features = false, version = '4.0.0-dev', git = 'https://
 serde = '1.0.126'
 sp-core = {default-features = false, version = '4.0.0-dev', git = 'https://github.com/paritytech/substrate.git', branch = 'master'}
 frame-support-test = {default-features = false, version = '3.0.0', git = 'https://github.com/paritytech/substrate.git', branch = 'master'}
-pallet-scheduler = {default-features = false, version = '4.0.0-dev', git = 'https://github.com/paritytech/substrate.git', branch = 'master'}
 
 [features]
 default = ['std']
