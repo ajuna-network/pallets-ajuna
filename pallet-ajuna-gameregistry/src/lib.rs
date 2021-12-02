@@ -6,7 +6,10 @@
 use codec::{Decode, Encode};
 use frame_support::{
 	log,
-	traits::{LockIdentifier, Randomness},
+	traits::{
+		schedule::{DispatchTime, Named},
+		LockIdentifier, Randomness
+	},
 };
 //use frame_system::WeightInfo;
 use scale_info::TypeInfo;
@@ -15,6 +18,8 @@ use sp_runtime::{
 	RuntimeDebug,
 };
 use sp_std::vec::Vec;
+
+use pallet_matchmaker::MatchFunc;
 
 use log::info;
 
@@ -111,6 +116,12 @@ pub mod pallet {
 
 		/// The generator used to supply randomness to contracts through `seal_random`.
 		type Randomness: Randomness<Self::Hash, Self::BlockNumber>;
+
+		type Scheduler: Named<Self::BlockNumber, Self::Proposal, Self::PalletsOrigin>;
+
+		type PalletsOrigin: From<frame_system::RawOrigin<Self::AccountId>>;
+
+		type MatchMaker: MatchFunc<Self::AccountId>;
 
 		// /// Weight information for extrinsics in this pallet.
 		//type WeightInfo: WeightInfo;

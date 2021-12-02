@@ -26,10 +26,14 @@ frame-benchmarking = {default-features = false, optional = true, version = '4.0.
 frame-support = {default-features = false, version = '4.0.0-dev', git = 'https://github.com/paritytech/substrate.git', branch = 'master'}
 frame-system = {default-features = false, version = '4.0.0-dev', git = 'https://github.com/paritytech/substrate.git', branch = 'master'}
 
+# external pallets
+pallet-matchmaker = {default-features = false, version = '4.0.0-dev', git = 'https://github.com/ajuna-network/pallets-ajuna.git', branch = 'master'}
+
 [dev-dependencies]
 serde = '1.0.126'
 sp-core = {default-features = false, version = '4.0.0-dev', git = 'https://github.com/paritytech/substrate.git', branch = 'master'}
 frame-support-test = {default-features = false, version = '3.0.0', git = 'https://github.com/paritytech/substrate.git', branch = 'master'}
+pallet-scheduler = {default-features = false, version = '4.0.0-dev', git = 'https://github.com/paritytech/substrate.git', branch = 'master'}
 
 [features]
 default = ['std']
