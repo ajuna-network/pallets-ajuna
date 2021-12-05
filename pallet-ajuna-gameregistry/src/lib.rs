@@ -96,6 +96,7 @@ pub struct GameRule<GameRuleType> {
 }
 
 const GAMEREGISTRY_ID: LockIdentifier = *b"gameregi";
+const MAX_GAMES_PER_BLOCK: u8 = 10;
 const MAX_QUEUE_SIZE: u8 = 64;
 
 #[frame_support::pallet]
@@ -248,8 +249,24 @@ pub mod pallet {
 			// Anything that needs to be done at the start of the block.
 			// We don't do anything here.
 
+			// initial weights
+			let mut tot_weights = 10_000;
+			for _i in 0..MAX_GAMES_PER_BLOCK {
+				// try to create a match till we reached max games or no more matches available
+				let result = T::MatchMaker::try_match();
+				// if result is not empty we have a valid match
+				if !result.is_empty() {
+					// Create new game
+					let _game_id = Self::create_game(result[0].clone(), result[1].clone());
+					// weights need to be adjusted
+					tot_weights = tot_weights + T::DbWeight::get().reads_writes(1, 1);
+					continue
+				}
+				break
+			}
+
 			// return standard weigth for trying to fiond a match
-			return 0
+			return tot_weights
 		}
 
 		// `on_finalize` is executed at the end of block after all extrinsic are dispatched.
@@ -314,6 +331,23 @@ pub mod pallet {
 					Ok(())
 				},
 			}
+		}
+
+		/// Queue sender up for a game, ranking brackets
+		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+		pub fn queue(origin: OriginFor<T>) -> DispatchResult {
+			let sender = ensure_signed(origin)?;
+
+			// Make sure player has no board open.
+			ensure!(!PlayerBoard::<T>::contains_key(&sender), Error::<T>::PlayerBoardExists);
+
+			let bracket: u8 = 0;
+			// Add player to queue, duplicate check is done in matchmaker.
+			if !T::MatchMaker::add_queue(sender, bracket) {
+				return Err(Error::<T>::AlreadyQueued)?
+			}
+
+			Ok(())
 		}
 
 		/// Queue game will add game entry to registry and add it to the queue if requirements are met.
