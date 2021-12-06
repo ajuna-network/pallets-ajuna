@@ -6,11 +6,13 @@
 use codec::{Decode, Encode};
 use frame_support::{
 	log,
+	dispatch::DispatchResult,
 	traits::{
 		schedule::{DispatchTime, Named},
 		LockIdentifier, Randomness
 	},
 };
+
 //use frame_system::WeightInfo;
 use scale_info::TypeInfo;
 use sp_runtime::{
@@ -236,6 +238,8 @@ pub mod pallet {
 		NoGameQueue,
 		/// There is no such game entry
 		NoGameEntry,
+		/// Player is already queued for a match.
+		AlreadyQueued,
 	}
 
 	// Pallet implements [`Hooks`] trait to define some logic to execute in some context.
@@ -256,8 +260,12 @@ pub mod pallet {
 				let result = T::MatchMaker::try_match();
 				// if result is not empty we have a valid match
 				if !result.is_empty() {
+					let game_engine = GameEngine {
+						id: 1u8,
+						version: 1u8
+					};
 					// Create new game
-					let _game_id = Self::create_game(result[0].clone(), result[1].clone());
+					let _game_id = Self::queue_game(game_engine, result);
 					// weights need to be adjusted
 					tot_weights = tot_weights + T::DbWeight::get().reads_writes(1, 1);
 					continue
@@ -338,8 +346,7 @@ pub mod pallet {
 		pub fn queue(origin: OriginFor<T>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
-			// Make sure player has no board open.
-			ensure!(!PlayerBoard::<T>::contains_key(&sender), Error::<T>::PlayerBoardExists);
+			// #TODO[MUST_HAVE, ALLREADY_REGISTRED] check if player is already in the game registry for a game.
 
 			let bracket: u8 = 0;
 			// Add player to queue, duplicate check is done in matchmaker.
@@ -347,46 +354,6 @@ pub mod pallet {
 				return Err(Error::<T>::AlreadyQueued)?
 			}
 
-			Ok(())
-		}
-
-		/// Queue game will add game entry to registry and add it to the queue if requirements are met.
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-		pub fn queue_game(
-			origin: OriginFor<T>,
-			game_engine: GameEngine,
-			players: Vec<T::AccountId>,
-		) -> DispatchResult {
-			let who = ensure_signed(origin)?;
-
-			// check if requirements for this game are meet, for all the players.
-			let game_rules = Self::game_requirements(&game_engine);
-			for _game_rule in game_rules.iter() {
-				// #TODO[MUST_HAVE, REQUIRMENTS_CHECK] check if game engine requirments are meet for the players.
-			}
-
-			// create new game entry with corresponding informations
-			let game_entry = Self::create_game_entry(who, game_engine.clone(), players);
-
-			// insert game entry into registry.
-			<GameRegistry<T>>::insert(game_entry.id.clone(), game_entry.clone());
-
-			// retrieve game queue for asked cluster
-			let mut game_queue = Queue::new(MAX_QUEUE_SIZE.into());
-			if GameQueues::<T>::contains_key(&game_engine) {
-				game_queue = Self::game_queues(&game_engine);
-			}
-
-			// enqueue new game id
-			game_queue.enqueue(game_entry.id.clone());
-
-			// insert into waiting queue for Ajuna TEE
-			<GameQueues<T>>::insert(&game_engine, game_queue);
-
-			// Emit an event.
-			Self::deposit_event(Event::GameQueued(game_engine, game_entry.id));
-
-			// Return a successful DispatchResultWithPostInfo
 			Ok(())
 		}
 
@@ -543,14 +510,52 @@ impl<T: Config> Pallet<T> {
 		return (seed, &sender, Self::encode_and_update_nonce()).using_encoded(T::Hashing::hash)
 	}
 
+	/// Generate a new game between two players.
+	fn queue_game(
+		game_engine: GameEngine,
+		players: Vec<T::AccountId>,
+	) -> DispatchResult {
+
+		// check if requirements for this game are meet, for all the players.
+		let game_rules = Self::game_requirements(&game_engine);
+		for _game_rule in game_rules.iter() {
+			// #TODO[MUST_HAVE, REQUIRMENTS_CHECK] check if game engine requirments are meet for the players.
+		}
+
+		// #TODO[MUST_HAVE, HAS_A_PLAYER] must have at least one player.
+
+		// create new game entry with corresponding informations
+		let game_entry = Self::create_game_entry(game_engine.clone(), players);
+
+		// insert game entry into registry.
+		<GameRegistry<T>>::insert(game_entry.id.clone(), game_entry.clone());
+
+		// retrieve game queue for asked cluster
+		let mut game_queue = Queue::new(MAX_QUEUE_SIZE.into());
+		if GameQueues::<T>::contains_key(&game_engine) {
+			game_queue = Self::game_queues(&game_engine);
+		}
+
+		// enqueue new game id
+		game_queue.enqueue(game_entry.id.clone());
+
+		// insert into waiting queue for Ajuna TEE
+		<GameQueues<T>>::insert(&game_engine, game_queue);
+
+		// Emit an event.
+		Self::deposit_event(Event::GameQueued(game_engine, game_entry.id));
+
+		// Return a successful DispatchResultWithPostInfo
+		Ok(())
+	}
+
 	/// Generate a new game entry in waiting state.
 	fn create_game_entry(
-		sender: T::AccountId,
 		game_engine: GameEngine,
 		players: Vec<T::AccountId>,
 	) -> GameEntry<T::Hash, T::AccountId, GameEngine, GameState<T::AccountId>, T::BlockNumber> {
 		// get a random hash as game id
-		let game_id = Self::generate_random_hash(&GAMEREGISTRY_ID, sender.clone());
+		let game_id = Self::generate_random_hash(&GAMEREGISTRY_ID, players[0].clone());
 
 		// get current blocknumber
 		let mut state_change: [T::BlockNumber; 4] = [0u8.into(); 4];

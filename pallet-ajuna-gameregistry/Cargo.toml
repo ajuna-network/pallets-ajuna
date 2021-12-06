@@ -46,5 +46,6 @@ std = [
 	'frame-support/std',
 	'frame-system/std',
 	'frame-benchmarking/std',
+	'pallet-scheduler/std',
 ]
 try-runtime = ['frame-support/try-runtime']
