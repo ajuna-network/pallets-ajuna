@@ -5,11 +5,11 @@
 /// <https://substrate.dev/docs/en/knowledgebase/runtime/frame>
 use codec::{Decode, Encode};
 use frame_support::{
-	log,
 	dispatch::DispatchResult,
+	log,
 	traits::{
 		schedule::{DispatchTime, Named},
-		LockIdentifier, Randomness
+		LockIdentifier, Randomness,
 	},
 };
 
@@ -260,10 +260,7 @@ pub mod pallet {
 				let result = T::MatchMaker::try_match();
 				// if result is not empty we have a valid match
 				if !result.is_empty() {
-					let game_engine = GameEngine {
-						id: 1u8,
-						version: 1u8
-					};
+					let game_engine = GameEngine { id: 1u8, version: 1u8 };
 					// Create new game
 					let _game_id = Self::queue_game(game_engine, result);
 					// weights need to be adjusted
@@ -511,11 +508,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Generate a new game between two players.
-	fn queue_game(
-		game_engine: GameEngine,
-		players: Vec<T::AccountId>,
-	) -> DispatchResult {
-
+	fn queue_game(game_engine: GameEngine, players: Vec<T::AccountId>) -> DispatchResult {
 		// check if requirements for this game are meet, for all the players.
 		let game_rules = Self::game_requirements(&game_engine);
 		for _game_rule in game_rules.iter() {

@@ -24,7 +24,6 @@ fn correct_error_for_none_value() {
 #[test]
 fn regsitry_test() {
 	new_test_ext().execute_with(|| {
-
 		let mut current_block: u64 = 100;
 
 		let player1: u64 = 1u64;
@@ -51,7 +50,7 @@ fn regsitry_test() {
 		run_next_block();
 		current_block = current_block + 1;
 		assert_eq!(System::block_number(), current_block);
-		
+
 		// queue up matchmaker second player
 		assert_ok!(Registry::queue(Origin::signed(player2)));
 

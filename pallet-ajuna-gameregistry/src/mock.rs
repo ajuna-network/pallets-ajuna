@@ -108,12 +108,13 @@ impl pallet_gameregistry::Config for Test {
 /// Build genesis storage according to the mock runtime.
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	//frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
-	let t = GenesisConfig { 
+	let t = GenesisConfig {
 		system: Default::default(),
-		scheduler: Default::default(), 
-		registry: Default::default() }
-		.build_storage()
-		.unwrap();
+		scheduler: Default::default(),
+		registry: Default::default(),
+	}
+	.build_storage()
+	.unwrap();
 	t.into()
 }
 
