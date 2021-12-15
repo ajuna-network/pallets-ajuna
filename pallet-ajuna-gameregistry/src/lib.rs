@@ -210,6 +210,9 @@ pub mod pallet {
 		/// parameters. [something, who]
 		SomethingStored(u32, T::AccountId),
 
+		// Player has queued to play.
+		PlayerQueued(T::AccountId),
+
 		/// Game queued in waiting queue
 		GameQueued(GameEngine, T::Hash),
 
@@ -347,9 +350,12 @@ pub mod pallet {
 
 			let bracket: u8 = 0;
 			// Add player to queue, duplicate check is done in matchmaker.
-			if !T::MatchMaker::add_queue(sender, bracket) {
+			if !T::MatchMaker::add_queue(sender.clone(), bracket) {
 				return Err(Error::<T>::AlreadyQueued)?
 			}
+
+			// Emit an event.
+			Self::deposit_event(Event::PlayerQueued(sender));
 
 			Ok(())
 		}
