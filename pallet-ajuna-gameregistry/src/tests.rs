@@ -24,6 +24,8 @@ fn correct_error_for_none_value() {
 #[test]
 fn regsitry_test() {
 	new_test_ext().execute_with(|| {
+		let mut current_block: u64 = 100;
+
 		let player1: u64 = 1u64;
 		let player2: u64 = 2u64;
 
@@ -36,11 +38,25 @@ fn regsitry_test() {
 		players.push(player1.clone());
 		players.push(player2.clone());
 
+		// start from block 100
+		run_to_block(current_block);
+
 		let queue_test1 = Registry::game_queues(&game_engine1);
 		assert_eq!(queue_test1.length(), 0);
 
-		// queue up game
-		assert_ok!(Registry::queue_game(Origin::signed(scheduler), game_engine1.clone(), players));
+		// queue up matchmaker first player
+		assert_ok!(Registry::queue(Origin::signed(player1)));
+
+		run_next_block();
+		current_block = current_block + 1;
+		assert_eq!(System::block_number(), current_block);
+
+		// queue up matchmaker second player
+		assert_ok!(Registry::queue(Origin::signed(player2)));
+
+		run_next_block();
+		current_block = current_block + 1;
+		assert_eq!(System::block_number(), current_block);
 
 		// check if we have something queued
 		let queue_test2 = Registry::game_queues(&game_engine1);
