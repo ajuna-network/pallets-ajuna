@@ -33,7 +33,7 @@ pallet-matchmaker = {default-features = false, version = '4.0.0-dev', git = 'htt
 
 [dev-dependencies]
 serde = '1.0.126'
-sp-core = {default-features = false, version = '4.0.0-dev', git = 'https://github.com/paritytech/substrate.git', branch = 'master'}
+sp-core = {default-features = false, version = '4.1.0-dev', git = 'https://github.com/paritytech/substrate.git', branch = 'master'}
 frame-support-test = {default-features = false, version = '3.0.0', git = 'https://github.com/paritytech/substrate.git', branch = 'master'}
 
 [features]
