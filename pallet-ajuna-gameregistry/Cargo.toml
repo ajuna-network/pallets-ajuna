@@ -29,7 +29,7 @@ frame-system = {default-features = false, version = '4.0.0-dev', git = 'https://
 pallet-scheduler = {default-features = false, version = '4.0.0-dev', git = 'https://github.com/paritytech/substrate.git', branch = 'master'}
 
 # external pallets
-pallet-matchmaker = {default-features = false, version = '4.0.0-dev', git = 'https://github.com/ajuna-network/pallets-ajuna.git', branch = 'master'}
+pallet-matchmaker = {default-features = false, version = '4.0.0-dev', git = 'https://github.com/ajuna-network/pallets-ajuna.git', branch = 'fixing_master'}
 
 [dev-dependencies]
 serde = '1.0.126'
